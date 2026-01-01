@@ -1,0 +1,167 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SignalGUI.ViewModels"
+             x:Class="SignalGUI.Views.CompositeComponentView"
+             x:DataType="vm:CompositeComponentViewModel">
+
+  <UserControl.Styles>
+    <Style Selector="Border.SectionBorder">
+      <Setter Property="BorderBrush" Value="Gray" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="10" />
+      <Setter Property="Margin" Value="5" />
+    </Style>
+
+    <Style Selector="TextBlock.SectionHeader">
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Margin" Value="0,0,0,5" />
+    </Style>
+  </UserControl.Styles>
+
+  <StackPanel Orientation="Vertical" Margin="10">
+    <!-- Object Name Field with Compute Button -->
+    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+      <TextBlock Text="Object Name:" VerticalAlignment="Center" Margin="0,0,10,0" />
+      <TextBox Text="{Binding ObjectName}" Width="200" />
+      <Button Content="Compute" Command="{Binding ComputeSignalCommand}"
+              Margin="10,0,0,0" VerticalAlignment="Center" />
+    </StackPanel>
+
+    <!-- Main Container with four columns: Parameters Panel + Source + Expression + Filter -->
+    <Border Classes="SectionBorder">
+      <Grid ColumnDefinitions="2*, 2*, 2*, 2*">
+        <!-- Left Column: Parameter Editing Panel -->
+        <StackPanel Grid.Column="0" Margin="0,0,10,0">
+          <TextBlock Text="Parameters" Classes="SectionHeader" />
+          <ScrollViewer MaxHeight="200">
+            <ItemsControl ItemsSource="{Binding CurrentParameters, Mode=OneWay}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <StackPanel Orientation="Vertical" Margin="0,2">
+                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                    <TextBox Text="{Binding StringValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Width="100" Margin="0,2,0,5" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </StackPanel>
+        <!-- Source Group Column (now Grid.Column="1") -->
+        <StackPanel Grid.Column="1" Margin="0,0,5,0">
+          <TextBlock Text="Source Group" Classes="SectionHeader" />
+
+          <!-- Dynamic Source List -->
+          <ItemsControl ItemsSource="{Binding Sources}" Margin="0,0,0,10">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="vm:SourceItemViewModel">
+                <Border Background="Transparent" Margin="0,2" Cursor="Hand">
+                  <Border.ContextFlyout>
+                    <MenuFlyout>
+                      <MenuItem Header="Select" Command="{Binding $parent[UserControl].DataContext.SelectSourceCommand}"
+                                CommandParameter="{Binding .}" />
+                    </MenuFlyout>
+                  </Border.ContextFlyout>
+                  <StackPanel Orientation="Horizontal" PointerPressed="OnSourceItemPointerPressed">
+                    <TextBlock Text="{Binding Letter}" FontWeight="Bold" Width="20" />
+                    <TextBlock Text=": " />
+                    <TextBlock Text="{Binding Configuration}" Background="Transparent" Padding="3" />
+                    <Button Content="X" Command="{Binding $parent[UserControl].DataContext.RemoveSourceCommand}"
+                            CommandParameter="{Binding .}"
+                            Width="25" Height="25" Margin="5,0,0,0" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <!-- Source Dropdown Button -->
+          <ComboBox Name="SourceComboBox"
+                    ItemsSource="{Binding AvailableSourceTypes}"
+                    Margin="0,5,0,0">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding ObjType.Name}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <Button Content="Add Selected Source"
+                  Command="{Binding AddSourcesCommand}"
+                  CommandParameter="{Binding #SourceComboBox.SelectedItem, Mode=OneWay}"
+                  Margin="0,5,0,0" />
+        </StackPanel>
+
+        <!-- Middle Column: Expression Field (now Grid.Column="2") -->
+        <StackPanel Grid.Column="2" Margin="5,0">
+          <TextBlock Text="Expression" Classes="SectionHeader" />
+          <TextBox Text="{Binding Expression}"
+                   Watermark="e.g., A+B, A*B/C"
+                   Margin="0,0,10,10" />
+          <TextBlock Text="Available Sources:" FontWeight="Bold" />
+          <ItemsControl ItemsSource="{Binding AvailableSourcesForExpression}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Background="LightBlue"
+                        Padding="5,2"
+                        Margin="2"
+                        CornerRadius="3">
+                  <TextBlock Text="{Binding .}" />
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <!-- Right Column: Filter Group (now Grid.Column="3") -->
+        <StackPanel Grid.Column="3" Margin="5,0,0,0">
+          <TextBlock Text="Filter Group" Classes="SectionHeader" />
+
+          <!-- Dynamic Filter List with Drag and Drop -->
+          <ListBox Name="FilterList" ItemsSource="{Binding Filters}" Margin="0,0,0,10"
+                   SelectionMode="Single" BorderThickness="0" Background="Transparent">
+            <ListBox.ItemTemplate>
+              <DataTemplate DataType="vm:FilterItemViewModel">
+                <Border Background="Transparent" Margin="0,2" DataContext="{Binding .}" Cursor="Hand">
+                  <Border.ContextFlyout>
+                    <MenuFlyout>
+                      <MenuItem Header="Select" Command="{Binding $parent[UserControl].DataContext.SelectFilterCommand}"
+                                CommandParameter="{Binding .}" />
+                    </MenuFlyout>
+                  </Border.ContextFlyout>
+                  <StackPanel Orientation="Horizontal" PointerPressed="OnFilterItemPointerPressed">
+                    <Border Width="20" Background="LightGray" CornerRadius="3" Cursor="SizeAll"
+                            Name="DragHandle" PointerPressed="OnFilterDragHandlePointerPressed" />
+                    <TextBlock Text="{Binding Configuration}" Width="150" Background="Transparent" Padding="3" />
+                    <Button Content="X" Command="{Binding $parent[UserControl].DataContext.RemoveFilterCommand}"
+                            CommandParameter="{Binding .}"
+                            Width="25" Height="25" Margin="5,0,0,0" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <!-- Filter Dropdown Button -->
+          <ComboBox Name="FilterComboBox"
+                    ItemsSource="{Binding AvailableFilterTypes}"
+                    Margin="0,5,0,0">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding ObjType.Name}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <Button Content="Add Selected Filter"
+                  Command="{Binding AddFiltersCommand}"
+                  CommandParameter="{Binding #FilterComboBox.SelectedItem, Mode=OneWay}"
+                  Margin="0,5,0,0" />
+        </StackPanel>
+      </Grid>
+    </Border>
+  </StackPanel>
+</UserControl>
