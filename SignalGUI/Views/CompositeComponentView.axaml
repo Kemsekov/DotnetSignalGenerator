@@ -39,11 +39,12 @@
             <ItemsControl ItemsSource="{Binding CurrentParameters, Mode=OneWay}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <StackPanel Orientation="Vertical" Margin="0,2">
-                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                  <Grid Margin="0,2" ColumnDefinitions="*, 100">
+                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                               VerticalAlignment="Center" Grid.Column="0" />
                     <TextBox Text="{Binding StringValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             Width="100" Margin="0,2,0,5" />
-                  </StackPanel>
+                             Grid.Column="1" Margin="5,0,0,0" />
+                  </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
