@@ -9,11 +9,13 @@ using SignalGUI.Utils;
 using SignalCore.Storage;
 using SignalCore.Computation;
 using NumpyDotNet;
+using ReactiveUI;
 
 namespace SignalGUI.ViewModels;
 
 public partial class CompositeComponentViewModel : ViewModelBase
 {
+    ndarray? _createdSignal;
     [ObservableProperty]
     private string _objectName = "NewObject";
 
@@ -261,7 +263,9 @@ public partial class CompositeComponentViewModel : ViewModelBase
 
         //this one applies filters/transformations/normalizations/etc
         var createdSignal = combineSources.Composition(
-            ops.Select(v=>(Func<ndarray,ndarray>)v.Compute).ToArray()
+            [s => s.at(1), .. // first select Y dimension
+            // then apply filters,transforms,etc
+            ops.Select(v=>(Func<ndarray,ndarray>)v.Compute)]
         );
         
         // this one starts this operations chain computation
@@ -281,7 +285,9 @@ public partial class CompositeComponentViewModel : ViewModelBase
         //createdSignal.PercentCompleted
 
         //this one blocks. It waits for chain to be computed and returns
-        var result = createdSignal.Result;
+        _createdSignal = createdSignal.Result;
+        System.Console.WriteLine(_createdSignal.shape);
+        System.Console.WriteLine(combineSources.Result.shape);
     }
 }
 
