@@ -66,12 +66,12 @@
                     </MenuFlyout>
                   </Border.ContextFlyout>
                   <StackPanel Orientation="Horizontal" PointerPressed="OnSourceItemPointerPressed">
-                    <TextBlock Text="{Binding Letter}" FontWeight="Bold" Width="20" />
-                    <TextBlock Text=": " />
-                    <TextBlock Text="{Binding Configuration}" Background="Transparent" Padding="3" />
+                    <TextBlock Text="{Binding Letter}" FontWeight="Bold" Width="20" VerticalAlignment="Center" />
+                    <TextBlock Text=": " VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Configuration}" Background="Transparent" Padding="3" Width="150" VerticalAlignment="Center" />
                     <Button Content="X" Command="{Binding $parent[UserControl].DataContext.RemoveSourceCommand}"
                             CommandParameter="{Binding .}"
-                            Width="25" Height="25" Margin="5,0,0,0" />
+                            Width="25" Height="25" Margin="5,0,0,0" VerticalAlignment="Center" />
                   </StackPanel>
                 </Border>
               </DataTemplate>
