@@ -127,6 +127,9 @@ public partial class CompositeComponentViewModel : ViewModelBase
     [ObservableProperty]
     private FilterItemViewModel? _selectedFilter;
 
+    [ObservableProperty]
+    private GuiObjectFactory? _signalParams = SignalParameters.CreateFactory();
+
     [RelayCommand]
     public void SelectSource(SourceItemViewModel source)
     {
@@ -141,6 +144,14 @@ public partial class CompositeComponentViewModel : ViewModelBase
         SelectedFilter = filter;
         SelectedSource = null; // Deselect source if filter is selected
         UpdateCurrentParameters();
+    }
+
+    [RelayCommand]
+    public void SelectSignalParams()
+    {
+        SelectedSource = null;
+        SelectedFilter = null;
+        UpdateCurrentParametersForSignalParams();
     }
 
     [ObservableProperty]
@@ -168,6 +179,23 @@ public partial class CompositeComponentViewModel : ViewModelBase
                 var value = SelectedFilter.Factory.InstanceArguments[param.Key];
                 var paramVM = new ParameterViewModelWithCallback(param.Key, param.Value, value, (newValue) => {
                     SelectedFilter.Factory.InstanceArguments[param.Key] = newValue;
+                });
+                CurrentParameters.Add(paramVM);
+            }
+        }
+    }
+
+    private void UpdateCurrentParametersForSignalParams()
+    {
+        CurrentParameters.Clear();
+
+        if (SignalParams != null)
+        {
+            foreach (var param in SignalParams.Arguments)
+            {
+                var value = SignalParams.InstanceArguments[param.Key];
+                var paramVM = new ParameterViewModelWithCallback(param.Key, param.Value, value, (newValue) => {
+                    SignalParams.InstanceArguments[param.Key] = newValue;
                 });
                 CurrentParameters.Add(paramVM);
             }

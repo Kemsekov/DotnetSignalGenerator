@@ -19,10 +19,12 @@
   </UserControl.Styles>
 
   <StackPanel Orientation="Vertical" Margin="10">
-    <!-- Object Name Field with Compute Button -->
+    <!-- Object Name Field with Signal Parameters and Compute Button -->
     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
       <TextBlock Text="Object Name:" VerticalAlignment="Center" Margin="0,0,10,0" />
       <TextBox Text="{Binding ObjectName}" Width="200" />
+      <Button Content="Signal Parameters" Command="{Binding SelectSignalParamsCommand}"
+              Margin="10,0,0,0" VerticalAlignment="Center" />
       <Button Content="Compute" Command="{Binding ComputeSignalCommand}"
               Margin="10,0,0,0" VerticalAlignment="Center" />
     </StackPanel>
