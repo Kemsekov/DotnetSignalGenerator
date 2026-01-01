@@ -35,7 +35,7 @@
         <!-- Left Column: Parameter Editing Panel -->
         <StackPanel Grid.Column="0" Margin="0,0,10,0">
           <TextBlock Text="Parameters" Classes="SectionHeader" />
-          <ScrollViewer MaxHeight="200">
+          <ScrollViewer MaxHeight="220">
             <ItemsControl ItemsSource="{Binding CurrentParameters, Mode=OneWay}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>

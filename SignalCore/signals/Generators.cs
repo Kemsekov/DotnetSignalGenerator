@@ -1,10 +1,5 @@
 // TODO: добавь тесты, валидатор данных какой-нибудь общий
-using NumpyDotNet;
 namespace SignalCore;
-public interface ISignalGenerator
-{
-    ndarray Sample(float tStart, float tEnd,int points, float amplitude,float frequency, float phase);
-}
 
 public class SinusoidGenerator : ISignalGenerator
 {

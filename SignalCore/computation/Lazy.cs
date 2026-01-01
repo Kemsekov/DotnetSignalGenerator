@@ -266,7 +266,7 @@ public static class LazyTrackedOperation
     /// <param name="arg">The TrackedOperation whose result will be passed to each action.</param>
     /// <param name="todo">The actions to execute in parallel with the TrackedOperation's result.</param>
     /// <returns>A TrackedOperation that will execute the actions in parallel.</returns>
-    public static TrackedOperation<bool> Action<TArg>(TrackedOperation<TArg> arg, params Action<TArg>[] todo)
+    public static TrackedOperation<bool> Action<TArg>(this TrackedOperation<TArg> arg, params Action<TArg>[] todo)
     {
         var totalOperations = todo.Length;
         bool delayedTask(Action<int> onTaskCompleted)

@@ -4,17 +4,7 @@ using MathNet.Numerics.IntegralTransforms;
 using NumpyDotNet;
 using NWaves.Transforms;
 using NWaves.Transforms.Wavelets;
-
 namespace SignalCore;
-
-/// <summary>
-/// Transform signal from time to frequency or time-frequency or any other domain. <br/>
-/// Operations like FFT, Gabor transform, Wigner-Ville Distribution (WVD), Hilbert-Huang Transform (HHT), Stockwell Transform (S-Transform), etc
-/// </summary>
-public interface ITransform
-{
-    ndarray Compute(ndarray signal);
-}
 
 public class FFTTransform : ITransform
 {

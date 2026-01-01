@@ -6,6 +6,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SignalCore;
 using SignalGUI.Utils;
+using SignalCore.Storage;
+using SignalCore.Computation;
+using NumpyDotNet;
 
 namespace SignalGUI.ViewModels;
 
@@ -221,16 +224,64 @@ public partial class CompositeComponentViewModel : ViewModelBase
     [RelayCommand]
     private void ComputeSignal()
     {
-        // TODO: Implement the actual signal computation logic
-        // This is a placeholder implementation
-        Console.WriteLine($"Computing signal for object: {ObjectName}");
-        Console.WriteLine($"Expression: {Expression}");
+        var sources = 
+            Sources.Select(v => new{letter=v.Letter, instance=v.Factory.GetInstance()});
 
-        // Here you would typically:
-        // 1. Parse the expression
-        // 2. Evaluate the signal based on sources and filters
-        // 3. Apply the filters in sequence
-        // 4. Store or display the result
+        var signalEdit = 
+            Filters.Select(v => v.Factory.GetInstance());
+        
+        var args = SignalParams.GetInstance() as SignalParameters ?? throw new ArgumentException("Failed to cast SignalParameters");
+
+        var generators = sources
+            .Where(s=>s.instance is ISignalGenerator)
+            .Select(s=>new{
+                s.letter,
+                instance=s.instance as ISignalGenerator ?? throw new Exception() //impossible exception
+            });
+        var ops = signalEdit.Where(s=>s is ISignalOperation).Cast<ISignalOperation>();
+
+        var expr = new StringExpression(Expression);
+
+
+        // yeah, that's ugly
+        Func<(string name, ndarray signal)> SignalFactory(ISignalGenerator g,string signalLetter)
+            => () => (
+                signalLetter,
+                g.Sample(args.TStart,args.TEnd,args.Points,args.Amplitude,args.Frequency,args.Phase)
+            );
+
+        
+        //this one creates signal sources
+        var generationOperation = LazyTrackedOperation.Factory(
+            generators.Select(v=>SignalFactory(v.instance,v.letter)).ToArray()
+        );
+
+        // this one combines multiple sources into single signal
+        var combineSources = generationOperation.Transform(expr.Call);
+
+        //this one applies filters/transformations/normalizations/etc
+        var createdSignal = combineSources.Composition(
+            ops.Select(v=>(Func<ndarray,ndarray>)v.Compute).ToArray()
+        );
+        
+        // this one starts this operations chain computation
+        createdSignal.Run();
+
+        // this one allows to subscribe to times when any step of execution
+        // is done
+        createdSignal.OnExecutedStep += Console.WriteLine;
+
+        // this one tells whether the signal is still computing
+        //createdSignal.IsRunning
+
+        // This one tells how long it took to create signal so far
+        //createdSignal.ElapsedMilliseconds
+
+        // this one tells what percentage of operations are completed
+        //createdSignal.PercentCompleted
+
+        //this one blocks. It waits for chain to be computed and returns
+        var result = createdSignal.Result;
     }
 }
 

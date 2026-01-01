@@ -31,22 +31,22 @@ public class ObjectFactory
         => t.AssemblyQualifiedName ?? throw new Exception($"Cannot deduce assembly type name of type {t.Name}");
     public string TypeFullName { get; set; } = ""; // type.AssemblyQualifiedName
     public Type Type => GetTypeFromFullName(TypeFullName);
-    public Dictionary<string, Argument> ConstructorArguments { get; set; } = [];
+    public IDictionary<string, Argument> ConstructorArguments { get; set; } = new Dictionary<string,Argument>();
     
     // Default constructor
     public ObjectFactory() : this("", new Dictionary<string, object>()) { }
     
     // Constructors with Dictionary<string, object> arguments
-    public ObjectFactory(string typeFullName, Dictionary<string, object> args)
+    public ObjectFactory(string typeFullName, IDictionary<string, object> args)
     {
         TypeFullName = typeFullName;
         ConstructorArguments = ConvertArgsToArguments(args);
     }
     
-    public ObjectFactory(Type type, Dictionary<string, object> args)
+    public ObjectFactory(Type type, IDictionary<string, object> args)
         : this(GetTypeFullName(type), args) { }
     
-    public ObjectFactory(object instance, Dictionary<string, object> args)
+    public ObjectFactory(object instance, IDictionary<string, object> args)
         : this(instance.GetType(), args) { }
     
     // Constructors with (string, object)[] arguments
@@ -115,7 +115,7 @@ public class ObjectFactory
      Type.GetType(typeFullName) ?? throw new ArgumentException($"Type not found: {typeFullName}");
     
     
-    private static Dictionary<string, Argument> ConvertArgsToArguments(Dictionary<string, object> args)
+    private static Dictionary<string, Argument> ConvertArgsToArguments(IDictionary<string, object> args)
         => args.ToDictionary(
             v => v.Key,
             v => new Argument

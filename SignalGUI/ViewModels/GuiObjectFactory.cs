@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SignalCore.Storage;
 using SignalGUI.Utils;
 
 namespace SignalGUI.ViewModels;
@@ -28,4 +29,9 @@ public class GuiObjectFactory
     {
         return _objectName;
     }
+    public object GetInstance()
+        => new ObjectFactory(
+                ObjType ?? throw new ArgumentException("Cannot get type"),
+                InstanceArguments
+            ).CreateInstance();
 }

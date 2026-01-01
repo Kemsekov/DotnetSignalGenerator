@@ -24,38 +24,12 @@ public static class Filters
 }
 
 
-/// <summary>
-/// Defines a contract for signal processing filters that operate on <see cref="ndarray"/> data.
-/// Filters is such operation that only modifies existing signal in some way or another.
-/// </summary>
-public interface IFilter
-{
-    /// <summary>
-    /// Applies a filtering algorithm to the input signal.
-    /// </summary>
-    /// <param name="signal">The input <see cref="ndarray"/> representing the time-series data.</param>
-    /// <returns>A new <see cref="ndarray"/> containing the filtered signal.</returns>
-    public ndarray Apply(ndarray signal);
-}
 
-/// <summary>
-/// Defines a contract for a single-step filtering calculation.
-/// </summary>
-public interface IFilterMethod
-{
-    /// <summary>
-    /// Calculates the next state of the filter based on current and previous inputs.
-    /// </summary>
-    /// <param name="t">The current accumulated filter state.</param>
-    /// <param name="xi">The current input signal value.</param>
-    /// <param name="xi_prev">The previous input signal value.</param>
-    /// <returns>The updated filter state value.</returns>
-    public float Step(float t, float xi, float xi_prev);
-}
+
 
 public class AddNormalNoiseFilter(float mean, float std) : IFilter
 {
-    public ndarray Apply(ndarray signal)
+    public ndarray Compute(ndarray signal)
     {
         var rand = new np.random();
         return signal+rand.randn(signal.shape)*std+mean;
@@ -99,7 +73,7 @@ public class ZeroPhaseFilter(IFilterMethod filterMethod) : IFilter
     /// </summary>
     /// <param name="signal">The signal to be filtered.</param>
     /// <returns>A phase-corrected <see cref="ndarray"/> signal.</returns>
-    public ndarray Apply(ndarray signal)
+    public ndarray Compute(ndarray signal)
     {
         var n = signal.shape[0];
         if (n == 0)
@@ -165,7 +139,7 @@ public class ZeroPhaseFilter(IFilterMethod filterMethod) : IFilter
 // TODO: add check for 0<lowQ<highQ<1
 public class CutOutliersFilter(float lowQuantile, float highQuantile) : IFilter
 {
-    public ndarray Apply(ndarray signal)
+    public ndarray Compute(ndarray signal)
     {
         var l = np.quantile(signal,lowQuantile);
         var h = np.quantile(signal,highQuantile);

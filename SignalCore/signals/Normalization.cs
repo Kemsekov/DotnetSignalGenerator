@@ -1,16 +1,9 @@
 namespace SignalCore;
-/// <summary>
-/// Normalization of signal
-/// </summary>
-public interface INormalization
-{
-    ndarray Apply(ndarray signal);
-}
 
 public class MinMaxNormalization(float min,float max) : INormalization
 {
-    float scale = max-min;
-    public ndarray Apply(ndarray signal)
+    readonly float scale = max-min;
+    public ndarray Compute(ndarray signal)
     {
         var smin = np.min(signal);
         var smax = np.max(signal);
@@ -20,7 +13,7 @@ public class MinMaxNormalization(float min,float max) : INormalization
 
 public class ZScoreNormalization(float mean, float std) : INormalization
 {
-    public ndarray Apply(ndarray signal)
+    public ndarray Compute(ndarray signal)
     {
         var smean = signal.Mean();
         var sstd = signal.Std()+1e-6;

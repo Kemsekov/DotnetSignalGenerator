@@ -1,14 +1,5 @@
-using NumpyDotNet;
-
 namespace SignalCore;
-/// <summary>
-/// Signal statistic
-/// </summary> <summary>
-public interface ISignalStatistic
-{
-    string Name{get;}
-    ndarray Compute(ndarray signal);
-}
+
 
 public class MeanStatistic : ISignalStatistic
 {
