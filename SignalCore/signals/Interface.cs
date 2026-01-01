@@ -8,14 +8,9 @@ public interface ISignalGenerator
     /// <summary>
     /// Samples signal with given properties
     /// </summary>
-    /// <param name="tStart">Start time of signal</param>
-    /// <param name="tEnd">End time of signal</param>
-    /// <param name="points">Number of points of discretization</param>
-    /// <param name="amplitude">Signal amplitude</param>
-    /// <param name="frequency">Signal frequency</param>
-    /// <param name="phase">Signal phase</param>
+
     /// <returns>Sample ndarray of shape [2,points] for time and signal values</returns>
-    ndarray Sample(float tStart, float tEnd,int points, float amplitude,float frequency, float phase);
+    ndarray Sample(int points);
 }
 
 /// <summary>

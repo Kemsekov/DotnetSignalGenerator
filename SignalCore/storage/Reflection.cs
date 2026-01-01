@@ -17,24 +17,27 @@ public static class Reflection
     /// <summary>
     /// Finds largest constructor with largest number of arguments of given type
     /// </summary>
-    public static IDictionary<string,Type>? GetSupportedConstructor(this Type type,Type[] allowedConstructorTypes)
+    public static IDictionary<string,(Type type, object? defaultValue)>? GetSupportedConstructor(this Type type,Type[] allowedConstructorTypes)
     {
         var constructors = type.GetConstructors();
-        var result = new List<IDictionary<string, Type>>();
+        var result = new List<IDictionary<string, (Type type, object? defaultValue)>>();
 
         for (int i = 0; i < constructors.Length; i++)
         {
             var constructor = constructors[i];
+            
             var parameters = constructor.GetParameters();
+            
             var paramTypes = parameters.Select(v=>v.ParameterType);
             if(paramTypes.Any(v=>!allowedConstructorTypes.Contains(v))) continue;
 
-            var paramDict = new Dictionary<string, Type>();
+            var paramDict = new Dictionary<string, (Type type, object? defaultValue)>();
 
             foreach (var param in parameters)
             {
                 if(param?.Name is null) continue;
-                paramDict[param.Name] = param.ParameterType;
+                var paramDef = (param.DefaultValue==DBNull.Value) ? null : param.DefaultValue;
+                paramDict[param.Name] = (param.ParameterType,paramDef);
             }
 
             result.Add(paramDict);

@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SignalGUI.ViewModels"
+             xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
              x:Class="SignalGUI.Views.CompositeComponentView"
              x:DataType="vm:CompositeComponentViewModel">
 
@@ -167,6 +168,23 @@
                   Margin="0,5,0,0" />
         </StackPanel>
       </Grid>
+    </Border>
+    <!-- Chart Area -->
+    <Border Classes="SectionBorder" Margin="10,10,10,10">
+      <StackPanel Orientation="Vertical">
+        <TextBlock Text="Signal Plot" Classes="SectionHeader" Margin="0,0,0,5" />
+        <Grid RowDefinitions="Auto,*" Margin="0,5,0,0">
+          <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
+            <Button Content="Plot Line" Command="{Binding PlotLineCommand}" Margin="0,0,10,0" />
+            <Button Content="Plot Scatter" Command="{Binding PlotScatterCommand}" Margin="0,0,10,0" />
+            <Button Content="Clear Plot" Command="{Binding ClearPlotCommand}" />
+          </StackPanel>
+          <Grid Grid.Row="1" Name="ChartGrid" Height="400">
+            <lvc:CartesianChart x:Name="SignalChart" Series="{Binding Series}"
+                                XAxes="{Binding XAxes}" YAxes="{Binding YAxes}" />
+          </Grid>
+        </Grid>
+      </StackPanel>
     </Border>
   </StackPanel>
 </UserControl>

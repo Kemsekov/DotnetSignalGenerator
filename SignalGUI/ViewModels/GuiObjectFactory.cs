@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using SignalCore.Storage;
 using SignalGUI.Utils;
 
@@ -12,15 +13,19 @@ public class GuiObjectFactory
     public IDictionary<string, Type> Arguments { get; set; } = new Dictionary<string,Type>();
     public IDictionary<string, object> InstanceArguments { get; set; } = new Dictionary<string,object>();
     public string Name => _objectName;
-    public GuiObjectFactory(Type objType, IDictionary<string, Type> arguments,string? objectName = null)
+    public GuiObjectFactory(Type objType, IDictionary<string, (Type type, object? defaultValue)> arguments,string? objectName = null)
     {
         ObjType = objType;
-        Arguments = arguments;
-
+        Arguments = arguments.ToDictionary(v=>v.Key,v=>v.Value.type);
+        // System.Console.WriteLine(objType.Name);
         // Initialize instance arguments with default values
         foreach (var arg in arguments)
         {
-            InstanceArguments[arg.Key] = ArgumentsTypesUtils.GetDefaultValue(arg.Value);
+            var defaultArgument = arg.Value.defaultValue ??
+                ArgumentsTypesUtils.GetDefaultValue(arg.Value.type);
+            InstanceArguments[arg.Key] = defaultArgument;
+
+            // System.Console.WriteLine($"{arg.Value.type.Name} {arg.Key} {InstanceArguments[arg.Key]} {arg.Value.defaultValue is null}");
         }
         _objectName = objectName ?? objType.Name;
     }

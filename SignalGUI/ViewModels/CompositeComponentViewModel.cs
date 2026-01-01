@@ -11,6 +11,10 @@ using SignalCore.Computation;
 using NumpyDotNet;
 using ReactiveUI;
 using System.Threading.Tasks;
+using LiveChartsCore;
+using LiveChartsCore.SkiaSharpView;
+using LiveChartsCore.SkiaSharpView.Avalonia;
+using Avalonia.Threading;
 
 namespace SignalGUI.ViewModels;
 
@@ -168,6 +172,19 @@ public partial class CompositeComponentViewModel : ViewModelBase
     [ObservableProperty]
     private ObservableCollection<ParameterViewModelWithCallback> _currentParameters = new();
 
+    // Chart properties
+    [ObservableProperty]
+    private ObservableCollection<ISeries> _series = new();
+
+    [ObservableProperty]
+    private List<Axis> _xAxes = new() { new Axis { Name = "Time" } };
+
+    [ObservableProperty]
+    private List<Axis> _yAxes = new() { new Axis { Name = "Amplitude" } };
+
+    private float[]? _xValues;
+    private float[]? _yValues;
+
     private void UpdateCurrentParameters()
     {
         CurrentParameters.Clear();
@@ -237,13 +254,13 @@ public partial class CompositeComponentViewModel : ViewModelBase
             Expression="A"; // just identity of first signal
 
         CompletedPercent=0;
-        var sources = 
-            Sources.Select(v => new{letter=v.Letter, instance=v.Factory.GetInstance()});
+        var sources =
+            Sources.Where(v => v.Factory != null).Select(v => new{letter=v.Letter, instance=v.Factory?.GetInstance()}).Where(s => s.instance != null).ToList();
 
-        var signalEdit = 
-            Filters.Select(v => v.Factory.GetInstance());
-        
-        var args = SignalParams.GetInstance() as SignalParameters ?? throw new ArgumentException("Failed to cast SignalParameters");
+        var signalEdit =
+            Filters.Where(v => v.Factory != null).Select(v => v.Factory?.GetInstance()).Where(s => s != null).ToList();
+
+        var args = SignalParams?.GetInstance() as SignalParameters ?? throw new ArgumentException("Failed to cast SignalParameters");
 
         var generators = sources
             .Where(s=>s.instance is ISignalGenerator)
@@ -260,10 +277,10 @@ public partial class CompositeComponentViewModel : ViewModelBase
         Func<(string name, ndarray signal)> SignalFactory(ISignalGenerator g,string signalLetter)
             => () => (
                 signalLetter,
-                g.Sample(args.TStart,args.TEnd,args.Points,args.Amplitude,args.Frequency,args.Phase)
+                g.Sample(args.Points)
             );
 
-        
+
         //this one creates signal sources
         var generationOperation = LazyTrackedOperation.Factory(
             generators.Select(v=>SignalFactory(v.instance,v.letter)).ToArray()
@@ -278,7 +295,7 @@ public partial class CompositeComponentViewModel : ViewModelBase
             // then apply filters,transforms,etc
             ops.Select(v=>(Func<ndarray,ndarray>)v.Compute)]
         );
-        
+
         // Subscribe to the OnExecutedStep event to update completion percentage
         createdSignal.OnExecutedStep += (_) => {
             // Update the CompletedPercent property by multiplying PercentCompleted by 100 and rounding to int
@@ -292,14 +309,67 @@ public partial class CompositeComponentViewModel : ViewModelBase
         // this one tells whether the signal is still computing
         //createdSignal.IsRunning
 
+
         _createdSignal = createdSignal;
         // This one tells how long it took to create signal so far
         //createdSignal.ElapsedMilliseconds
 
         // This event called once computation is completed
-        createdSignal.OnExecutionDone+=res=>{
+    createdSignal.OnExecutionDone+=res=>{
             System.Console.WriteLine(res.shape);
+            var X = combineSources?.Result?.at(0)?.AsFloatArray();
+            var Y = res?.AsFloatArray();
+            // here X is signal time, Y is signal value
+
+            // Store the X and Y values for plotting
+            _xValues = X;
+            _yValues = Y;
+            // Automatically plot as a line chart after computation is done
+            // Need to dispatch to UI thread since this event is called from background thread
+            Dispatcher.UIThread.Post(() => {
+                if (_xValues != null && _yValues != null)
+                {
+                    PlotScatter();
+                }
+            });
         };
+    }
+
+    // Chart commands
+    [RelayCommand]
+    private void PlotLine()
+    {
+        if (_xValues != null && _yValues != null)
+        {
+            Series.Clear();
+            var lineSeries = RenderUtils.Plot("",_xValues, _yValues);
+            Series.Add(lineSeries);
+
+            // Update axes if needed
+            XAxes = new List<Axis> { new Axis { Name = "Time" } };
+            YAxes = new List<Axis> { new Axis { Name = "Amplitude" } };
+        }
+    }
+
+    [RelayCommand]
+    private void PlotScatter()
+    {
+        if (_xValues != null && _yValues != null)
+        {
+            Series.Clear();
+            var scatterSeries = RenderUtils.Scatter("",_xValues, _yValues);
+            Series.Add(scatterSeries);
+
+            // Update axes if needed
+            XAxes = new List<Axis> { new Axis { Name = "Time" } };
+            YAxes = new List<Axis> { new Axis { Name = "Amplitude" } };
+        }
+    }
+
+    [RelayCommand]
+    private void ClearPlot()
+    {
+        Series.Clear();
     }
 }
 
