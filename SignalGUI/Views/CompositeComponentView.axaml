@@ -27,6 +27,8 @@
               Margin="10,0,0,0" VerticalAlignment="Center" />
       <Button Content="Compute" Command="{Binding ComputeSignalCommand}"
               Margin="10,0,0,0" VerticalAlignment="Center" />
+      <TextBlock Text="{Binding CompletedPercent, StringFormat='Completed: {0}%'}"
+                 VerticalAlignment="Center" Margin="10,0,0,0" />
     </StackPanel>
 
     <!-- Main Container with four columns: Parameters Panel + Source + Expression + Filter -->

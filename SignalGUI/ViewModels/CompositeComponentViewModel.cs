@@ -10,14 +10,20 @@ using SignalCore.Storage;
 using SignalCore.Computation;
 using NumpyDotNet;
 using ReactiveUI;
+using System.Threading.Tasks;
 
 namespace SignalGUI.ViewModels;
 
 public partial class CompositeComponentViewModel : ViewModelBase
 {
-    ndarray? _createdSignal;
+    TrackedOperation<ndarray>? _createdSignal;
+    ndarray? _signal => _createdSignal?.Result;
+
     [ObservableProperty]
     private string _objectName = "NewObject";
+
+    [ObservableProperty]
+    private int _completedPercent = 0;
 
     [ObservableProperty]
     private string _expression = "";
@@ -226,6 +232,11 @@ public partial class CompositeComponentViewModel : ViewModelBase
     [RelayCommand]
     private void ComputeSignal()
     {
+        if(Sources.Count==0) return;
+        if(Expression=="")
+            Expression="A"; // just identity of first signal
+
+        CompletedPercent=0;
         var sources = 
             Sources.Select(v => new{letter=v.Letter, instance=v.Factory.GetInstance()});
 
@@ -268,26 +279,27 @@ public partial class CompositeComponentViewModel : ViewModelBase
             ops.Select(v=>(Func<ndarray,ndarray>)v.Compute)]
         );
         
+        // Subscribe to the OnExecutedStep event to update completion percentage
+        createdSignal.OnExecutedStep += (_) => {
+            // Update the CompletedPercent property by multiplying PercentCompleted by 100 and rounding to int
+            var percent = (int)Math.Round(createdSignal.PercentCompleted * 100);
+            CompletedPercent = percent;
+        };
+
         // this one starts this operations chain computation
         createdSignal.Run();
-
-        // this one allows to subscribe to times when any step of execution
-        // is done
-        createdSignal.OnExecutedStep += Console.WriteLine;
 
         // this one tells whether the signal is still computing
         //createdSignal.IsRunning
 
+        _createdSignal = createdSignal;
         // This one tells how long it took to create signal so far
         //createdSignal.ElapsedMilliseconds
 
-        // this one tells what percentage of operations are completed
-        //createdSignal.PercentCompleted
-
-        //this one blocks. It waits for chain to be computed and returns
-        _createdSignal = createdSignal.Result;
-        System.Console.WriteLine(_createdSignal.shape);
-        System.Console.WriteLine(combineSources.Result.shape);
+        // This event called once computation is completed
+        createdSignal.OnExecutionDone+=res=>{
+            System.Console.WriteLine(res.shape);
+        };
     }
 }
 

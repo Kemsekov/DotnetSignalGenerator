@@ -14,7 +14,7 @@ public interface ISignalGenerator
     /// <param name="amplitude">Signal amplitude</param>
     /// <param name="frequency">Signal frequency</param>
     /// <param name="phase">Signal phase</param>
-    /// <returns>Sample ndarray of shape [phase,2] for time and signal values</returns>
+    /// <returns>Sample ndarray of shape [2,points] for time and signal values</returns>
     ndarray Sample(float tStart, float tEnd,int points, float amplitude,float frequency, float phase);
 }
 

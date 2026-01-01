@@ -13,6 +13,7 @@ public class TrackedOperation<T>(Func<Action<int>, T> jobUnit, int totalSteps, F
     /// Event fired when a step in the operation is executed.
     /// </summary>
     public event Action<int> OnExecutedStep = a => { };
+    public event Action<T> OnExecutionDone = (i) => {};
     
     private Stopwatch watch = new();
     private Task<T>? _running = null;
@@ -63,6 +64,7 @@ public class TrackedOperation<T>(Func<Action<int>, T> jobUnit, int totalSteps, F
                 OnExecutedStep(previousOperationTotalSteps + i);
             });
             watch.Stop();
+            OnExecutionDone(res);
             return res;
         });
     }
