@@ -1,0 +1,1 @@
+sudo apt-get install -y libfontconfig1 libfreetype6
