@@ -6,7 +6,7 @@ using SignalCore.Computation;
 using SignalCore.Storage;
 
 // to load numpy library
-new SinusoidGenerator().Sample(0,1,10,10,10,1);
+new SinusoidGenerator().Sample(10);
 
 var s1 = new SinusoidGenerator();
 var s2 = new TriangleGenerator();
@@ -27,8 +27,8 @@ var stftT = new STFTTransform(256,256).Compute;
 var inverseStftT = new InverseSTFTTransform(256,256).Compute;
 
 var signal = LazyTrackedOperation.Factory(
-    ()=>s1.Sample(0,20,points,1.2f,0.5f,0),
-    ()=>s2.Sample(0,20,points,1f,0.1f,1.3f)
+    ()=>s1.Sample(points),
+    ()=>s2.Sample(points)
 )
 .Transform(signals=>signals[0]+signals[1])
 .Transform(data =>
