@@ -14,7 +14,11 @@ public class TrackedOperation<T>(Func<Action<int>, T> jobUnit, int totalSteps, F
     /// </summary>
     public event Action<int> OnExecutedStep = a => { };
     public event Action<T> OnExecutionDone = (i) => {};
-    
+    public event Action<AggregateException> OnException = (i) => {};
+    /// <summary>
+    /// Exceptions (if any) of running task
+    /// </summary>
+    public AggregateException? Exception => _running?.Exception;
     private Stopwatch watch = new();
     private Task<T>? _running = null;
     private int[] executedSteps = new int[totalSteps];
@@ -58,14 +62,21 @@ public class TrackedOperation<T>(Func<Action<int>, T> jobUnit, int totalSteps, F
         watch.Start();
         _running = Task.Run(() =>
         {
-            var res = jobUnit(i =>
+            try{
+                var res = jobUnit(i =>
+                {
+                    executedSteps[i] = 1;
+                    OnExecutedStep(previousOperationTotalSteps + i);
+                });
+                watch.Stop();
+                OnExecutionDone(res);
+                return res;
+            }
+            catch(AggregateException e)
             {
-                executedSteps[i] = 1;
-                OnExecutedStep(previousOperationTotalSteps + i);
-            });
-            watch.Stop();
-            OnExecutionDone(res);
-            return res;
+                OnException(e);
+                throw;
+            }
         });
     }
     
