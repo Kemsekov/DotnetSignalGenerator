@@ -13,7 +13,10 @@ public class StringExpression
     public StringExpression(string expression)
     {
         _expression=expression;
-        interpreter = new Interpreter().Reference(typeof(np));
+        interpreter = new Interpreter()
+            .Reference(typeof(np))
+            .Reference(typeof(NDArrayExtensions))
+            .Reference(typeof(MathF));
     }
     public ndarray Call(params (string name, ndarray signal)[] parameters)
     {
