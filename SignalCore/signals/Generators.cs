@@ -18,6 +18,22 @@ public abstract class SignalGeneratorBase(float tStart=0, float tEnd=1, float am
     public abstract ndarray Sample(int points);
 }
 
+/// <summary>
+/// Returns Y=X identity functions
+/// </summary>
+public class IdentityGenerator : SignalGeneratorBase
+{
+    public IdentityGenerator(float tStart=0, float tEnd=1, float amplitude=1, float frequency=1, float phase=0) : base(tStart, tEnd, amplitude, frequency, phase)
+    {
+    }
+    public override ndarray Sample(int points)
+    {
+        double r = 0;
+        var t = np.linspace(TStart,TEnd,ref r,points,dtype:np.Float32);
+        return np.stack([t,t],0);
+    }
+}
+
 public class SinusoidGenerator : SignalGeneratorBase
 {
     public SinusoidGenerator(float tStart=0, float tEnd=1, float amplitude=1, float frequency=1, float phase=0) : base(tStart, tEnd, amplitude, frequency, phase)
