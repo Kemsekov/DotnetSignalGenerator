@@ -19,8 +19,8 @@ public static class RenderUtils
             Values = points,
             GeometrySize = pointSize,
             Stroke = new SolidColorPaint(c),
-            XToolTipLabelFormatter = point => $"t={point.Coordinate.PrimaryValue:F2}",
-            YToolTipLabelFormatter = point => $"y={point.Coordinate.SecondaryValue:F2}",
+            XToolTipLabelFormatter = point => $"t={point.Coordinate.SecondaryValue:F3}",
+            YToolTipLabelFormatter = point => $"{point.Coordinate.PrimaryValue:F3}",
         };
     }
     // Plot: Line chart
@@ -35,8 +35,8 @@ public static class RenderUtils
             Fill = null,          // Remove the area fill under the line
             GeometrySize = 0,     // Remove dots at data points
             Stroke = new SolidColorPaint(c) { StrokeThickness = lineThickness },
-            XToolTipLabelFormatter = point => $"t={point.Coordinate.PrimaryValue:F2}",
-            YToolTipLabelFormatter = point => $"y={point.Coordinate.SecondaryValue:F2}",
+            XToolTipLabelFormatter = point => $"t={point.Coordinate.SecondaryValue:F3}",
+            YToolTipLabelFormatter = point => $"{point.Coordinate.PrimaryValue:F3}",
         };
     }
 }

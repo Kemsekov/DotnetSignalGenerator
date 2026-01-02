@@ -6,14 +6,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SignalCore;
 using SignalGUI.Utils;
-using SignalCore.Storage;
 using SignalCore.Computation;
 using NumpyDotNet;
-using ReactiveUI;
-using System.Threading.Tasks;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
-using LiveChartsCore.SkiaSharpView.Avalonia;
 using Avalonia.Threading;
 
 namespace SignalGUI.ViewModels;
@@ -21,7 +17,6 @@ namespace SignalGUI.ViewModels;
 public partial class CompositeComponentViewModel : ViewModelBase
 {
     TrackedOperation<ndarray>? _createdSignal;
-    ndarray? _signal => _createdSignal?.Result;
 
     [ObservableProperty]
     private string _objectName = "NewObject";
@@ -35,6 +30,14 @@ public partial class CompositeComponentViewModel : ViewModelBase
     public ObservableCollection<SourceItemViewModel> Sources { get; set; } = new();
     public ObservableCollection<FilterItemViewModel> Filters { get; set; } = new();
     
+    [ObservableProperty]
+    private SourceItemViewModel? _selectedSource;
+
+    [ObservableProperty]
+    private FilterItemViewModel? _selectedFilter;
+
+    [ObservableProperty]
+    private GuiObjectFactory? _signalParams = SignalParameters.CreateFactory();
     public List<GuiObjectFactory> AvailableSourceTypes { get; set; }
         = typeof(ISignalGenerator)
         .GetAllImplementations()
@@ -58,6 +61,24 @@ public partial class CompositeComponentViewModel : ViewModelBase
         .ToList();
 
     public List<string> AvailableSourcesForExpression => Sources.Select(s => s.Letter).ToList();
+
+    // Chart properties
+    [ObservableProperty]
+    private ObservableCollection<ISeries> _series = new();
+
+    [ObservableProperty]
+    private List<Axis> _xAxes = new() { new Axis { Name = "Time" } };
+
+    [ObservableProperty]
+    private List<Axis> _yAxes = new() { new Axis { Name = "Amplitude" } };
+
+    private float[]? _xValues;
+    private float[]? _yValues;
+    private float[]? _yImagValues;
+
+    [ObservableProperty]
+    private ObservableCollection<ParameterViewModelWithCallback> _currentParameters = new();
+
 
     [RelayCommand]
     private void AddSources(GuiObjectFactory selectedSourceType)
@@ -136,15 +157,6 @@ public partial class CompositeComponentViewModel : ViewModelBase
         }
     }
 
-    [ObservableProperty]
-    private SourceItemViewModel? _selectedSource;
-
-    [ObservableProperty]
-    private FilterItemViewModel? _selectedFilter;
-
-    [ObservableProperty]
-    private GuiObjectFactory? _signalParams = SignalParameters.CreateFactory();
-
     [RelayCommand]
     public void SelectSource(SourceItemViewModel source)
     {
@@ -168,22 +180,6 @@ public partial class CompositeComponentViewModel : ViewModelBase
         SelectedFilter = null;
         UpdateCurrentParametersForSignalParams();
     }
-
-    [ObservableProperty]
-    private ObservableCollection<ParameterViewModelWithCallback> _currentParameters = new();
-
-    // Chart properties
-    [ObservableProperty]
-    private ObservableCollection<ISeries> _series = new();
-
-    [ObservableProperty]
-    private List<Axis> _xAxes = new() { new Axis { Name = "Time" } };
-
-    [ObservableProperty]
-    private List<Axis> _yAxes = new() { new Axis { Name = "Amplitude" } };
-
-    private float[]? _xValues;
-    private float[]? _yValues;
 
     private void UpdateCurrentParameters()
     {
@@ -258,7 +254,7 @@ public partial class CompositeComponentViewModel : ViewModelBase
             Sources.Where(v => v.Factory != null).Select(v => new{letter=v.Letter, instance=v.Factory?.GetInstance()}).Where(s => s.instance != null).ToList();
 
         var signalEdit =
-            Filters.Where(v => v.Factory != null).Select(v => v.Factory?.GetInstance()).Where(s => s != null).ToList();
+            Filters.Where(v => v.Factory != null && v.Enabled).Select(v => v.Factory?.GetInstance()).Where(s => s != null).ToList();
 
         var args = SignalParams?.GetInstance() as SignalParameters ?? throw new ArgumentException("Failed to cast SignalParameters");
 
@@ -287,12 +283,26 @@ public partial class CompositeComponentViewModel : ViewModelBase
         );
 
         // this one combines multiple sources into single signal
-        var combineSources = generationOperation.Transform(expr.Call);
+        var combineSources = 
+            generationOperation
+            .Transform(v=>
+                // drop X values before applying expression
+                v.Select(pair=>(pair.name,pair.signal.at(1)))
+                .ToArray()
+            )
+            .Transform(expr.Call)
+            .Transform(s =>
+            {
+                //Add again X value after expression is applied
+                var X = generationOperation.Result[0].signal.at(0);
+                return np.concatenate([X,s]);
+            });
 
         //this one applies filters/transformations/normalizations/etc
         var createdSignal = combineSources.Composition(
-            [s => s.at(1), .. // first select Y dimension
+            [s=>s.at(1), // first select Y dimension
             // then apply filters,transforms,etc
+            ..
             ops.Select(v=>(Func<ndarray,ndarray>)v.Compute)]
         );
 
@@ -308,30 +318,45 @@ public partial class CompositeComponentViewModel : ViewModelBase
 
         // this one tells whether the signal is still computing
         //createdSignal.IsRunning
-
-
+        
         _createdSignal = createdSignal;
         // This one tells how long it took to create signal so far
         //createdSignal.ElapsedMilliseconds
 
-        // This event called once computation is completed
-    createdSignal.OnExecutionDone+=res=>{
-            System.Console.WriteLine(res.shape);
-            var X = combineSources?.Result?.at(0)?.AsFloatArray();
-            var Y = res?.AsFloatArray();
-            // here X is signal time, Y is signal value
+        // if something broke
+        createdSignal.OnException += e =>
+        {
+            var inner = e.InnerException ?? e;
+            while(inner is AggregateException && inner.InnerException is not null)
+                inner = inner.InnerException;
+            System.Console.WriteLine(inner.Message);
+        };
 
-            // Store the X and Y values for plotting
-            _xValues = X;
-            _yValues = Y;
-            // Automatically plot as a line chart after computation is done
-            // Need to dispatch to UI thread since this event is called from background thread
-            Dispatcher.UIThread.Post(() => {
-                if (_xValues != null && _yValues != null)
-                {
-                    PlotScatter();
-                }
-            });
+        // This event called once computation is completed
+        createdSignal.OnExecutionDone+=res=>{
+            var genOut = combineSources?.Result;
+            System.Console.WriteLine("====================");
+            System.Console.WriteLine(res.shape);
+            System.Console.WriteLine(genOut?.shape);
+            // if we got single signal output of shape [1,N]
+            if(res.shape[0]==1 && res.shape.iDims.Length==2 || res.shape.iDims.Length==1)
+            {
+                if (res.Dtype == np.Complex)
+                    _yImagValues=res.Imag?.AsFloatArray();
+                else
+                    _yImagValues=null;
+
+                // here X is signal time, Y is signal value
+
+                // Store the X and Y values for plotting
+                _xValues = genOut?.at(0)?.AsFloatArray();
+                _yValues = res.Real?.AsFloatArray();
+                // Automatically plot as a line chart after computation is done
+                // Need to dispatch to UI thread since this event is called from background thread
+                Dispatcher.UIThread.Post(() => {
+                    PlotLine();
+                });
+            }
         };
     }
 
@@ -342,8 +367,15 @@ public partial class CompositeComponentViewModel : ViewModelBase
         if (_xValues != null && _yValues != null)
         {
             Series.Clear();
-            var lineSeries = RenderUtils.Plot("",_xValues, _yValues);
-            Series.Add(lineSeries);
+            Series.Add(
+                RenderUtils.Plot("Real",_xValues, _yValues,color: SkiaSharp.SKColors.Blue)
+            );
+            if(_yImagValues is not null)
+            {
+                Series.Add(
+                    RenderUtils.Plot("Imag",_xValues, _yImagValues,color: SkiaSharp.SKColors.Orange)
+                );
+            }
 
             // Update axes if needed
             XAxes = new List<Axis> { new Axis { Name = "Time" } };
@@ -357,8 +389,15 @@ public partial class CompositeComponentViewModel : ViewModelBase
         if (_xValues != null && _yValues != null)
         {
             Series.Clear();
-            var scatterSeries = RenderUtils.Scatter("",_xValues, _yValues);
-            Series.Add(scatterSeries);
+            Series.Add(
+                RenderUtils.Scatter("Real",_xValues, _yValues)
+            );
+            if(_yImagValues is not null)
+            {
+                Series.Add(
+                    RenderUtils.Scatter("Imag",_xValues, _yImagValues)
+                );
+            }
 
             // Update axes if needed
             XAxes = new List<Axis> { new Axis { Name = "Time" } };
@@ -371,22 +410,13 @@ public partial class CompositeComponentViewModel : ViewModelBase
     {
         Series.Clear();
     }
-}
 
-public partial class SourceItemViewModel : ViewModelBase
-{
-    [ObservableProperty]
-    private string _letter = "";
-
-    [ObservableProperty]
-    private GuiObjectFactory? _factory;
-
-    public string Configuration => $"{Factory?.Name}";
-}
-
-public partial class FilterItemViewModel : ViewModelBase
-{
-    [ObservableProperty]
-    private GuiObjectFactory? _factory;
-    public string Configuration => $"{Factory?.Name}";
+    [RelayCommand]
+    private void ToggleFilterEnabled(FilterItemViewModel filter)
+    {
+        if (filter != null)
+        {
+            filter.Enabled = !filter.Enabled;
+        }
+    }
 }
