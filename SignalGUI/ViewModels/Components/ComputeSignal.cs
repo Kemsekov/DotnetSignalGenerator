@@ -6,6 +6,7 @@ using SignalCore.Computation;
 using NumpyDotNet;
 using Avalonia.Threading;
 using System.Collections.Generic;
+using SignalGUI.Utils;
 
 namespace SignalGUI.ViewModels;
 
@@ -27,7 +28,7 @@ public partial class CompositeComponentViewModel
         var parse = ParseComputeArguments(out args, out generators, out ops, out expr);
         if(parse is Exception e)
         {
-            System.Console.WriteLine(e.GetMostInnerException());
+            ErrorHandlingUtils.ShowErrorWindow(e);
             //handle exception
             return;
         }
@@ -94,8 +95,7 @@ public partial class CompositeComponentViewModel
         // if something broke when computing
         createdSignal.OnException += e =>
         {
-            var inner = e.GetMostInnerException();
-            System.Console.WriteLine(inner.Message);
+            ErrorHandlingUtils.ShowErrorWindow(e);
         };
 
         // This event called once computation is completed

@@ -7,13 +7,27 @@ namespace SignalCore;
 /// <param name="amplitude">Signal amplitude</param>
 /// <param name="frequency">Signal frequency</param>
 /// <param name="phase">Signal phase</param>
-public abstract class SignalGeneratorBase(float tStart=0, float tEnd=1, float amplitude=1, float frequency=1, float phase=0) : ISignalGenerator
+public abstract class SignalGeneratorBase : ISignalGenerator
 {
-    public readonly float TStart = tStart;
-    public readonly float TEnd = tEnd;
-    public readonly float Amplitude = amplitude;
-    public readonly float Frequency = frequency;
-    public readonly float Phase = phase;
+    public readonly float TStart;
+    public readonly float TEnd;
+    public readonly float Amplitude;
+    public readonly float Frequency;
+    public readonly float Phase;
+
+    public SignalGeneratorBase(float tStart = 0, float tEnd = 1, float amplitude = 1, float frequency = 1, float phase = 0)
+    {
+        if (tStart >= tEnd)
+            throw new ArgumentException("tStart must be less than tEnd");
+        if (frequency < 0)
+            throw new ArgumentException("Frequency must be non-negative");
+
+        TStart = tStart;
+        TEnd = tEnd;
+        Amplitude = amplitude;
+        Frequency = frequency;
+        Phase = phase;
+    }
 
     public abstract ndarray Sample(int points);
 }
@@ -23,7 +37,7 @@ public abstract class SignalGeneratorBase(float tStart=0, float tEnd=1, float am
 /// </summary>
 public class IdentityGenerator : SignalGeneratorBase
 {
-    public IdentityGenerator(float tStart=0, float tEnd=1, float amplitude=1, float frequency=1, float phase=0) : base(tStart, tEnd, amplitude, frequency, phase)
+    public IdentityGenerator(float tStart = 0, float tEnd = 1, float amplitude = 1, float frequency = 1, float phase = 0) : base(tStart, tEnd, amplitude, frequency, phase)
     {
     }
     public override ndarray Sample(int points)
@@ -36,7 +50,7 @@ public class IdentityGenerator : SignalGeneratorBase
 
 public class SinusoidGenerator : SignalGeneratorBase
 {
-    public SinusoidGenerator(float tStart=0, float tEnd=1, float amplitude=1, float frequency=1, float phase=0) : base(tStart, tEnd, amplitude, frequency, phase)
+    public SinusoidGenerator(float tStart = 0, float tEnd = 1, float amplitude = 1, float frequency = 1, float phase = 0) : base(tStart, tEnd, amplitude, frequency, phase)
     {
     }
 
@@ -52,7 +66,7 @@ public class SinusoidGenerator : SignalGeneratorBase
 
 public class SquareGenerator : SignalGeneratorBase
 {
-    public SquareGenerator(float tStart=0, float tEnd=1, float amplitude=1, float frequency=1, float phase=0) : base(tStart, tEnd, amplitude, frequency, phase)
+    public SquareGenerator(float tStart = 0, float tEnd = 1, float amplitude = 1, float frequency = 1, float phase = 0) : base(tStart, tEnd, amplitude, frequency, phase)
     {
     }
 
@@ -68,7 +82,7 @@ public class SquareGenerator : SignalGeneratorBase
 
 public class TriangleGenerator : SignalGeneratorBase
 {
-    public TriangleGenerator(float tStart=0, float tEnd=1, float amplitude=1, float frequency=1, float phase=0) : base(tStart, tEnd, amplitude, frequency, phase)
+    public TriangleGenerator(float tStart = 0, float tEnd = 1, float amplitude = 1, float frequency = 1, float phase = 0) : base(tStart, tEnd, amplitude, frequency, phase)
     {
     }
 
@@ -83,7 +97,7 @@ public class TriangleGenerator : SignalGeneratorBase
 }
 public class SawToothGenerator : SignalGeneratorBase
 {
-    public SawToothGenerator(float tStart=0, float tEnd=1, float amplitude=1, float frequency=1, float phase=0) : base(tStart, tEnd, amplitude, frequency, phase)
+    public SawToothGenerator(float tStart = 0, float tEnd = 1, float amplitude = 1, float frequency = 1, float phase = 0) : base(tStart, tEnd, amplitude, frequency, phase)
     {
     }
 

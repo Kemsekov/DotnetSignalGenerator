@@ -25,57 +25,102 @@ public static class Filters
 }
 
 
-public class AddNormalNoiseFilter(float mean=0, float std=1) : IFilter
+public class AddNormalNoiseFilter : IFilter
 {
+    private readonly float _mean;
+    private readonly float _std;
+
+    public AddNormalNoiseFilter(float mean = 0, float std = 1)
+    {
+        if (std < 0)
+            throw new ArgumentException("Standard deviation must be non-negative");
+
+        _mean = mean;
+        _std = std;
+    }
+
     public ndarray Compute(ndarray signal)
     {
         var rand = new np.random();
         var noise = np.zeros_like(signal);
 
-        noise+=rand.randn(signal.shape);
-        
-        var j = new Complex(0,1).ToNdarray();
+        noise += rand.randn(signal.shape);
+
+        var j = new Complex(0, 1).ToNdarray();
         if (signal.Dtype == np.Complex)
         {
-            var to_add = rand.randn(signal.shape).astype(np.Complex)*j;
+            var to_add = rand.randn(signal.shape).astype(np.Complex) * j;
             noise += to_add;
         }
-        
-        return signal+noise*std+mean;
+
+        return signal + noise * _std + _mean;
     }
 }
 
-public class LowPassFilterMethod(float alpha) : IFilterMethod
+public class LowPassFilterMethod : IFilterMethod
 {
+    private readonly float _alpha;
+
+    public LowPassFilterMethod(float alpha = 0.9f)
+    {
+        if (alpha <= 0 || alpha >= 1)
+            throw new ArgumentException("Alpha must be between 0 and 1 (exclusive)");
+        _alpha = alpha;
+    }
+
     /// <inheritdoc/>
-    public float Step(float t, float xi, float xi_prev)=>alpha * (t - xi) + xi;
+    public float Step(float t, float xi, float xi_prev) => _alpha * (t - xi) + xi;
 }
 
-public class HighPassFilterMethod(float alpha=0.9f) : IFilterMethod
+public class HighPassFilterMethod : IFilterMethod
 {
+    private readonly float _alpha;
+
+    public HighPassFilterMethod(float alpha = 0.9f)
+    {
+        if (alpha <= 0 || alpha >= 1)
+            throw new ArgumentException("Alpha must be between 0 and 1 (exclusive)");
+        _alpha = alpha;
+    }
+
     /// <inheritdoc/>
-    public float Step(float t, float xi, float xi_prev)=>alpha * (t + xi - xi_prev);
+    public float Step(float t, float xi, float xi_prev) => _alpha * (t + xi - xi_prev);
 }
 /// <summary>
 /// Implements a first-order Low-Pass Filter (LPF) logic.
 /// </summary>
 public class LowPassFilter : ZeroPhaseFilter
 {
-    public LowPassFilter(float alpha=0.9f) : base(new LowPassFilterMethod(alpha)){}
+    public LowPassFilter(float alpha = 0.9f) : base(new LowPassFilterMethod(alpha))
+    {
+        if (alpha <= 0 || alpha >= 1)
+            throw new ArgumentException("Alpha must be between 0 and 1 (exclusive)");
+    }
 }
 /// <summary>
 /// Implements a first-order High-Pass Filter (HPF) logic.
 /// </summary>
 public class HighPassFilter : ZeroPhaseFilter
 {
-    public HighPassFilter(float alpha=0.9f) : base(new HighPassFilterMethod(alpha)){}
+    public HighPassFilter(float alpha = 0.9f) : base(new HighPassFilterMethod(alpha))
+    {
+        if (alpha <= 0 || alpha >= 1)
+            throw new ArgumentException("Alpha must be between 0 and 1 (exclusive)");
+    }
 }
 /// <summary>
 /// Implements a zero-phase filter by applying a filter method in both forward and backward directions.
 /// </summary>
-public class ZeroPhaseFilter(IFilterMethod filterMethod) : IFilter
+public class ZeroPhaseFilter : IFilter
 {
-    readonly IFilterMethod _filterMethod=filterMethod;
+    readonly IFilterMethod _filterMethod;
+
+    public ZeroPhaseFilter(IFilterMethod filterMethod)
+    {
+        if (filterMethod == null)
+            throw new ArgumentNullException(nameof(filterMethod));
+        _filterMethod = filterMethod;
+    }
 
     /// <summary>
     /// Applies the filter forward and then backward to eliminate phase shift.
@@ -145,16 +190,31 @@ public class ZeroPhaseFilter(IFilterMethod filterMethod) : IFilter
     }
 }
 
-// TODO: add check for 0<lowQ<highQ<1
-public class CutOutliersFilter(float lowQuantile=0.05f, float highQuantile=0.95f) : IFilter
+public class CutOutliersFilter : IFilter
 {
+    private readonly float _lowQuantile;
+    private readonly float _highQuantile;
+
+    public CutOutliersFilter(float lowQuantile = 0.05f, float highQuantile = 0.95f)
+    {
+        if (lowQuantile < 0 || lowQuantile >= 1)
+            throw new ArgumentException("Low quantile must be between 0 (inclusive) and 1 (exclusive)");
+        if (highQuantile <= 0 || highQuantile > 1)
+            throw new ArgumentException("High quantile must be between 0 (exclusive) and 1 (inclusive)");
+        if (lowQuantile >= highQuantile)
+            throw new ArgumentException("Low quantile must be less than high quantile");
+
+        _lowQuantile = lowQuantile;
+        _highQuantile = highQuantile;
+    }
+
     public ndarray Compute(ndarray signal)
     {
-        var l = np.quantile(signal,lowQuantile);
-        var h = np.quantile(signal,highQuantile);
+        var l = np.quantile(signal, _lowQuantile);
+        var h = np.quantile(signal, _highQuantile);
         signal = signal.Copy();
-        signal[signal<l]=l;
-        signal[signal>h]=h;
+        signal[signal < l] = l;
+        signal[signal > h] = h;
         return signal;
     }
 }
