@@ -1,4 +1,5 @@
 //TODO: спроси у чатагпт как тут лучше написать тесты
+using System.Numerics;
 using NumpyDotNet;
 namespace SignalCore;
 
@@ -24,15 +25,23 @@ public static class Filters
 }
 
 
-
-
-
-public class AddNormalNoiseFilter(float mean, float std) : IFilter
+public class AddNormalNoiseFilter(float mean=0, float std=1) : IFilter
 {
     public ndarray Compute(ndarray signal)
     {
         var rand = new np.random();
-        return signal+rand.randn(signal.shape)*std+mean;
+        var noise = np.zeros_like(signal);
+
+        noise+=rand.randn(signal.shape);
+        
+        var j = new Complex(0,1).ToNdarray();
+        if (signal.Dtype == np.Complex)
+        {
+            var to_add = rand.randn(signal.shape).astype(np.Complex)*j;
+            noise += to_add;
+        }
+        
+        return signal+noise*std+mean;
     }
 }
 
@@ -42,7 +51,7 @@ public class LowPassFilterMethod(float alpha) : IFilterMethod
     public float Step(float t, float xi, float xi_prev)=>alpha * (t - xi) + xi;
 }
 
-public class HighPassFilterMethod(float alpha) : IFilterMethod
+public class HighPassFilterMethod(float alpha=0.9f) : IFilterMethod
 {
     /// <inheritdoc/>
     public float Step(float t, float xi, float xi_prev)=>alpha * (t + xi - xi_prev);
@@ -52,14 +61,14 @@ public class HighPassFilterMethod(float alpha) : IFilterMethod
 /// </summary>
 public class LowPassFilter : ZeroPhaseFilter
 {
-    public LowPassFilter(float alpha) : base(new LowPassFilterMethod(alpha)){}
+    public LowPassFilter(float alpha=0.9f) : base(new LowPassFilterMethod(alpha)){}
 }
 /// <summary>
 /// Implements a first-order High-Pass Filter (HPF) logic.
 /// </summary>
 public class HighPassFilter : ZeroPhaseFilter
 {
-    public HighPassFilter(float alpha) : base(new HighPassFilterMethod(alpha)){}
+    public HighPassFilter(float alpha=0.9f) : base(new HighPassFilterMethod(alpha)){}
 }
 /// <summary>
 /// Implements a zero-phase filter by applying a filter method in both forward and backward directions.
@@ -137,7 +146,7 @@ public class ZeroPhaseFilter(IFilterMethod filterMethod) : IFilter
 }
 
 // TODO: add check for 0<lowQ<highQ<1
-public class CutOutliersFilter(float lowQuantile, float highQuantile) : IFilter
+public class CutOutliersFilter(float lowQuantile=0.05f, float highQuantile=0.95f) : IFilter
 {
     public ndarray Compute(ndarray signal)
     {
@@ -147,6 +156,68 @@ public class CutOutliersFilter(float lowQuantile, float highQuantile) : IFilter
         signal[signal<l]=l;
         signal[signal>h]=h;
         return signal;
+    }
+}
+
+public class BilateralFilter : IFilter
+{
+    public float SigmaS { get; }
+    public float SigmaR { get; }
+    public int WindowSize { get; }
+
+    public BilateralFilter(float sigmaS=1, float sigmaR=1,int windowSize = -1)
+    {
+        SigmaS=sigmaS;
+        SigmaR=sigmaR;
+        if (SigmaS <= 0 || SigmaR<=0)
+            throw new ArgumentException("SigmaS and SigmaR should be positive real");
+        WindowSize = windowSize<0 ? (int)MathF.Ceiling(3f*sigmaS) : windowSize;
+    }
+    ndarray _gaussian(ndarray t,float sigma)
+        => np.exp(-t*t/(2*sigma*sigma));
+    public ndarray ComputeNaive(ndarray signal)
+    {
+        //We assume input signals of shape (N,)
+        if(signal.shape.iDims.Length!=1)
+            throw new ArgumentException("BilateralFilter signal should be one-dimensional");
+        var p = np.arange(0,signal.shape[0],dtype:np.Int32).reshape(-1,1);
+        var q = np.arange(0,signal.shape[0],dtype:np.Int32).reshape(1,-1);
+
+        var Gs = _gaussian(np.absolute(p-q),SigmaS);
+        var Gr = _gaussian(signal.A(p)-signal.A(q),SigmaR);
+        var prod = Gs*Gr;
+        var W = np.sum(prod,-1)+1e-7; //avoid div by zero
+
+        var res = np.sum(prod*signal.A(q),-1)/W;
+
+        return res;
+    }
+
+    public ndarray Compute(ndarray signal)
+    {
+        System.Console.WriteLine($"shape {signal.shape}");
+        //We assume input signals of shape (N,)
+        var origShape = signal.shape;
+        signal = signal.reshape(-1);
+            
+        var p = np.arange(0,signal.shape[0],dtype:np.Int32).reshape(-1,1);
+        var shift = np.arange(-WindowSize,WindowSize+1,dtype:np.Int32).reshape(1,-1);
+        var q = p+shift;
+
+        var validItemsMask = ~((q<0) | (q>=signal.shape[0]));
+        validItemsMask=validItemsMask.astype(signal.Dtype);
+
+        q[q<0]=0; //move away a lot
+        q[q>=signal.shape[0]]=signal.shape[0]-1;
+        var Gs = _gaussian(np.absolute(p-q),SigmaS);
+        
+        var Gr = _gaussian(signal.A(p)-signal.A(q),SigmaR);
+        var prod = validItemsMask*Gs*Gr;
+        var W = np.sum(prod,-1)+1e-7; //avoid div by zero
+
+        var res = np.sum(prod*signal.A(q),-1)/W;
+        
+        return res.reshape(origShape);
     }
 }
 

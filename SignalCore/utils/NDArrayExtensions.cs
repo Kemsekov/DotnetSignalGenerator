@@ -21,7 +21,7 @@ public static class NDArrayExtensions
         var v = array[ind];
         return np.array(v,copy:false);
     }
-    public static ndarray to_ndarray(this object? obj)=>np.array(obj,copy:false);
-    public static float single(this object? obj) => obj.to_ndarray().AsFloatArray()[0];
+    public static ndarray ToNdarray(this object? obj)=>np.array(obj,copy:false);
+    public static float single(this object? obj) => obj.ToNdarray().AsFloatArray()[0];
 }
 

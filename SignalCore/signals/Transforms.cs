@@ -56,16 +56,19 @@ public class InverseSTFTTransform(int fftSize = 1024, int hopSize = 512) : ITran
     {
         var spec = signal.Select(v =>
         {
-            var c = v.to_ndarray();
+            var c = v.ToNdarray();
             return (c.Real.AsFloatArray(),c.Imag.AsFloatArray());
         }).ToList();
 
         var x = _stft.Inverse(spec);
         var res = np.array(x, copy: false);
-        return res[~np.isnan(res)].to_ndarray();
+        return res[~np.isnan(res)].ToNdarray();
     }
 }
 
+/// <summary>
+/// Fast wavelet transform
+/// </summary>
 public class FWTTransform(string waveletName = "db4", int levels = 3) : ITransform
 {
     public ndarray Compute(ndarray signal)
@@ -78,6 +81,9 @@ public class FWTTransform(string waveletName = "db4", int levels = 3) : ITransfo
     }
 }
 
+/// <summary>
+/// Fast wavelet transform inverse
+/// </summary>
 public class InverseFWTTransform(string waveletName = "db4", int levels = 3) : ITransform
 {
     public ndarray Compute(ndarray signal)

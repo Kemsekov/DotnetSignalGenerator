@@ -1,6 +1,6 @@
 namespace SignalCore;
 
-public class MinMaxNormalization(float min,float max) : INormalization
+public class MinMaxNormalization(float min=0,float max=1) : INormalization
 {
     readonly float scale = max-min;
     public ndarray Compute(ndarray signal)
@@ -11,7 +11,7 @@ public class MinMaxNormalization(float min,float max) : INormalization
     }
 }
 
-public class ZScoreNormalization(float mean, float std) : INormalization
+public class ZScoreNormalization(float mean=0, float std=1) : INormalization
 {
     public ndarray Compute(ndarray signal)
     {
