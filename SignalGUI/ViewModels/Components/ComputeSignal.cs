@@ -82,8 +82,7 @@ public partial class CompositeComponentViewModel
             CompletedPercent = percent;
         };
 
-        // this one starts operations chain signal computation
-        createdSignal.Run();
+
 
         // this one tells whether the computation is still computing
         //createdSignal.IsRunning
@@ -128,6 +127,9 @@ public partial class CompositeComponentViewModel
                 });
             }
         };
+        
+        // this one starts operations chain signal computation
+        createdSignal.Run();
 
         // this one computes all signal statistics
         (ndarray stat,string name) ComputeStatistic(ndarray signal, ISignalStatistic stat)
@@ -145,9 +147,9 @@ public partial class CompositeComponentViewModel
 
         signalStatistics.OnExecutionDone += res =>
         {
-            //res of type (ndarray stat, string name)[]
-            // i need to show statistics
+            _createdSignalStatistics = res;
         };
+        signalStatistics.Run();
     }
 
     Exception? ParseComputeArguments(

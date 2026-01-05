@@ -19,15 +19,16 @@ public class StdStatistic : ISignalStatistic
         return signal.Std();
     }
 }
-public class QuantileStatistic(float q) : ISignalStatistic
+
+public class QuantileStatistic(float q=0.5f) : ISignalStatistic
 {
     public string Name => $"Signal {q} quantile";
-
     public ndarray Compute(ndarray signal)
     {
         return np.quantile(signal,q);
     }
 }
+
 
 public class RootMeanSquareStatistic : ISignalStatistic
 {
