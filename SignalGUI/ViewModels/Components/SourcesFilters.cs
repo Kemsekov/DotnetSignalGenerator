@@ -16,7 +16,7 @@ namespace SignalGUI.ViewModels;
 public partial class CompositeComponentViewModel
 {
     [RelayCommand]
-    private void AddSources(GuiObjectFactory selectedSourceType)
+    public void AddSources(GuiObjectFactory selectedSourceType)
     {
 
         if (selectedSourceType == null) return;
@@ -41,7 +41,7 @@ public partial class CompositeComponentViewModel
     }
 
     [RelayCommand]
-    private void AddFilters(GuiObjectFactory selectedFilterType)
+    public void AddFilters(GuiObjectFactory selectedFilterType)
     {
         if (selectedFilterType == null) return;
 

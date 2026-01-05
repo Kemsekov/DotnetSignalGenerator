@@ -62,33 +62,36 @@
         <StackPanel Grid.Column="1" Margin="0,0,5,0">
           <TextBlock Text="Source Group" Classes="SectionHeader" />
 
-          <!-- Dynamic Source List -->
-          <ItemsControl ItemsSource="{Binding Sources}" Margin="0,0,0,10">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate DataType="vm:SourceItemViewModel">
-                <Border Background="Transparent" Margin="0,2" Cursor="Hand">
-                  <Border.ContextFlyout>
-                    <MenuFlyout>
-                      <MenuItem Header="Select" Command="{Binding $parent[UserControl].DataContext.SelectSourceCommand}"
-                                CommandParameter="{Binding .}" />
-                    </MenuFlyout>
-                  </Border.ContextFlyout>
-                  <StackPanel Orientation="Horizontal" PointerPressed="OnSourceItemPointerPressed">
-                    <TextBlock Text="{Binding Letter}" FontWeight="Bold" Width="20" VerticalAlignment="Center" />
-                    <TextBlock Text=": " VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding Configuration}" Background="Transparent" Padding="3" Width="150" VerticalAlignment="Center" />
-                    <Button Content="X" Command="{Binding $parent[UserControl].DataContext.RemoveSourceCommand}"
-                            CommandParameter="{Binding .}"
-                            Width="25" Height="25" Margin="5,0,0,0" VerticalAlignment="Center" />
-                  </StackPanel>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
+          <!-- Dynamic Source List with ScrollViewer -->
+          <ScrollViewer MaxHeight="150" Margin="0,0,0,10">
+            <ItemsControl ItemsSource="{Binding Sources}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="vm:SourceItemViewModel">
+                  <Border Background="Transparent" Margin="0,2" Cursor="Hand">
+                    <Border.ContextFlyout>
+                      <MenuFlyout>
+                        <MenuItem Header="Select" Command="{Binding $parent[UserControl].DataContext.SelectSourceCommand}"
+                                  CommandParameter="{Binding .}" />
+                      </MenuFlyout>
+                    </Border.ContextFlyout>
+                    <StackPanel Orientation="Horizontal" PointerPressed="OnSourceItemPointerPressed">
+                      <TextBlock Text="{Binding Letter}" FontWeight="Bold" Width="20" VerticalAlignment="Center" />
+                      <TextBlock Text=": " VerticalAlignment="Center" />
+                      <TextBlock Text="{Binding Configuration}" Background="Transparent" Padding="3" Width="150" VerticalAlignment="Center" />
+                      <Button Content="X" Command="{Binding $parent[UserControl].DataContext.RemoveSourceCommand}"
+                              CommandParameter="{Binding .}"
+                              Width="25" Height="25" Margin="5,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
 
           <!-- Source Dropdown Button -->
           <ComboBox Name="SourceComboBox"
                     ItemsSource="{Binding AvailableSourceTypes}"
+                    SelectionChanged="OnSourceSelectionChanged"
                     Margin="0,5,0,0">
             <ComboBox.ItemTemplate>
               <DataTemplate>
@@ -96,10 +99,6 @@
               </DataTemplate>
             </ComboBox.ItemTemplate>
           </ComboBox>
-          <Button Content="Add Selected Source"
-                  Command="{Binding AddSourcesCommand}"
-                  CommandParameter="{Binding #SourceComboBox.SelectedItem, Mode=OneWay}"
-                  Margin="0,5,0,0" />
         </StackPanel>
 
         <!-- Middle Column: Expression Field (now Grid.Column="2") -->
@@ -132,45 +131,48 @@
         <StackPanel Grid.Column="3" Margin="5,0,0,0">
           <TextBlock Text="Filter Group" Classes="SectionHeader" />
 
-          <!-- Dynamic Filter List with Drag and Drop -->
-          <ListBox Name="FilterList" ItemsSource="{Binding Filters}" Margin="0,0,0,10"
-                   SelectionMode="Single" BorderThickness="0" Background="Transparent">
-            <ListBox.ItemTemplate>
-              <DataTemplate DataType="vm:FilterItemViewModel">
-                <Border Background="Transparent" Margin="0,2" DataContext="{Binding .}" Cursor="Hand">
-                  <Border.ContextFlyout>
-                    <MenuFlyout>
-                      <MenuItem Header="Select" Command="{Binding $parent[UserControl].DataContext.SelectFilterCommand}"
-                                CommandParameter="{Binding .}" />
-                    </MenuFlyout>
-                  </Border.ContextFlyout>
-                  <StackPanel Orientation="Horizontal" PointerPressed="OnFilterItemPointerPressed">
-                    <Border Width="20" Background="LightGray" CornerRadius="3" Cursor="SizeAll"
-                            Name="DragHandle" PointerPressed="OnFilterDragHandlePointerPressed" />
-                    <TextBlock Text="{Binding Configuration}" Width="150" Background="Transparent" Padding="3" />
-                    <Button Content=""
-                            Command="{Binding $parent[UserControl].DataContext.ToggleFilterEnabledCommand}"
-                            CommandParameter="{Binding .}"
-                            Width="25" Height="25" Margin="5,0,0,0"
-                            Background="{Binding Enabled, Converter={StaticResource BoolToColorConverter}}">
-                        <Button.Styles>
-                            <Style Selector="Button /template/ ContentPresenter">
-                                <Setter Property="CornerRadius" Value="3"/>
-                            </Style>
-                        </Button.Styles>
-                    </Button>
-                    <Button Content="X" Command="{Binding $parent[UserControl].DataContext.RemoveFilterCommand}"
-                            CommandParameter="{Binding .}"
-                            Width="25" Height="25" Margin="5,0,0,0" />
-                  </StackPanel>
-                </Border>
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
+          <!-- Dynamic Filter List with Drag and Drop and ScrollViewer -->
+          <ScrollViewer MaxHeight="150" Margin="0,0,0,10">
+            <ListBox Name="FilterList" ItemsSource="{Binding Filters}"
+                     SelectionMode="Single" BorderThickness="0" Background="Transparent">
+              <ListBox.ItemTemplate>
+                <DataTemplate DataType="vm:FilterItemViewModel">
+                  <Border Background="Transparent" Margin="0,2" DataContext="{Binding .}" Cursor="Hand">
+                    <Border.ContextFlyout>
+                      <MenuFlyout>
+                        <MenuItem Header="Select" Command="{Binding $parent[UserControl].DataContext.SelectFilterCommand}"
+                                  CommandParameter="{Binding .}" />
+                      </MenuFlyout>
+                    </Border.ContextFlyout>
+                    <StackPanel Orientation="Horizontal" PointerPressed="OnFilterItemPointerPressed">
+                      <Border Width="20" Background="LightGray" CornerRadius="3" Cursor="SizeAll"
+                              Name="DragHandle" PointerPressed="OnFilterDragHandlePointerPressed" />
+                      <TextBlock Text="{Binding Configuration}" Width="150" Background="Transparent" Padding="3" />
+                      <Button Content=""
+                              Command="{Binding $parent[UserControl].DataContext.ToggleFilterEnabledCommand}"
+                              CommandParameter="{Binding .}"
+                              Width="25" Height="25" Margin="5,0,0,0"
+                              Background="{Binding Enabled, Converter={StaticResource BoolToColorConverter}}">
+                          <Button.Styles>
+                              <Style Selector="Button /template/ ContentPresenter">
+                                  <Setter Property="CornerRadius" Value="3"/>
+                              </Style>
+                          </Button.Styles>
+                      </Button>
+                      <Button Content="X" Command="{Binding $parent[UserControl].DataContext.RemoveFilterCommand}"
+                              CommandParameter="{Binding .}"
+                              Width="25" Height="25" Margin="5,0,0,0" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </ScrollViewer>
 
           <!-- Filter Dropdown Button -->
           <ComboBox Name="FilterComboBox"
                     ItemsSource="{Binding AvailableFilterTypes}"
+                    SelectionChanged="OnFilterSelectionChanged"
                     Margin="0,5,0,0">
             <ComboBox.ItemTemplate>
               <DataTemplate>
@@ -178,10 +180,6 @@
               </DataTemplate>
             </ComboBox.ItemTemplate>
           </ComboBox>
-          <Button Content="Add Selected Filter"
-                  Command="{Binding AddFiltersCommand}"
-                  CommandParameter="{Binding #FilterComboBox.SelectedItem, Mode=OneWay}"
-                  Margin="0,5,0,0" />
         </StackPanel>
       </Grid>
     </Border>

@@ -173,4 +173,32 @@ public partial class CompositeComponentView : UserControl
             }
         }
     }
+
+    private void OnSourceSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox comboBox &&
+            DataContext is CompositeComponentViewModel viewModel)
+        {
+            if (comboBox.SelectedItem is GuiObjectFactory selectedSourceType)
+            {
+                viewModel.AddSources(selectedSourceType);
+                // Clear the selection so the same item can be selected again
+                comboBox.SelectedItem = null;
+            }
+        }
+    }
+
+    private void OnFilterSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox comboBox &&
+            DataContext is CompositeComponentViewModel viewModel)
+        {
+            if (comboBox.SelectedItem is GuiObjectFactory selectedFilterType)
+            {
+                viewModel.AddFilters(selectedFilterType);
+                // Clear the selection so the same item can be selected again
+                comboBox.SelectedItem = null;
+            }
+        }
+    }
 }

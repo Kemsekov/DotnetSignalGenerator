@@ -9,7 +9,7 @@ public class SignalParameters
 {
     public int Points { get; set; }
 
-    public SignalParameters(int points = 100)
+    public SignalParameters(int points = 256)
     {
         Points = points;
     }
@@ -26,7 +26,7 @@ public class SignalParameters
         );
         
         // Set default values
-        factory.InstanceArguments["points"] = 100;
+        factory.InstanceArguments["points"] = 256;
 
         return factory;
     }
