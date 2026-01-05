@@ -36,27 +36,28 @@ public partial class CompositeComponentViewModel : ViewModelBase
 
     [ObservableProperty]
     private GuiObjectFactory? _signalParams = SignalParameters.CreateFactory();
-    public List<GuiObjectFactory> AvailableSourceTypes { get; set; }
-        = typeof(ISignalGenerator)
-        .GetAllImplementations()
+
+    static List<GuiObjectFactory> _GetImplementationFactories(params Type[] t)
+    {
+        return t.SelectMany(v=>v.GetAllImplementations())
         .Select(type=>
             new{type, ctor=type.GetSupportedConstructor(ArgumentsTypesUtils.SupportedTypes)}
         )
         .Where(v=>v.ctor is not null)
         .Select(v=>new GuiObjectFactory(v.type,v.ctor ?? throw new Exception()))
         .ToList();
+    }
+
+    public List<ISignalStatistic> AvailableSignalStatistics { get; set; }
+        = _GetImplementationFactories(typeof(ISignalStatistic))
+        .Select(v=>(ISignalStatistic)v.GetInstance())
+        .ToList();
+    
+    public List<GuiObjectFactory> AvailableSourceTypes { get; set; }
+        = _GetImplementationFactories(typeof(ISignalGenerator));
 
     public List<GuiObjectFactory> AvailableFilterTypes { get; set; }
-        =
-        typeof(IFilter).GetAllImplementations()
-        .Concat(typeof(INormalization).GetAllImplementations())
-        .Concat(typeof(ITransform).GetAllImplementations())
-        .Select(type=>
-            new{type, ctor=type.GetSupportedConstructor(ArgumentsTypesUtils.SupportedTypes)}
-        )
-        .Where(v=>v.ctor is not null)
-        .Select(v=>new GuiObjectFactory(v.type,v.ctor ?? throw new Exception()))
-        .ToList();
+        = _GetImplementationFactories(typeof(IFilter),typeof(INormalization),typeof(ITransform));
 
     public List<string> AvailableSourcesForExpression => Sources.Select(s => s.Letter).ToList();
 

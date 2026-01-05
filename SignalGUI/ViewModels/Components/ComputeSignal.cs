@@ -28,22 +28,22 @@ public partial class CompositeComponentViewModel
         var parse = ParseComputeArguments(out args, out generators, out ops, out expr);
         if(parse is Exception e)
         {
+            //show exception
             ErrorHandlingUtils.ShowErrorWindow(e);
-            //handle exception
             return;
         }
+
         // to shut up warnings
         if(args is null || generators is null || ops is null || expr is null)
             return;
 
-
-        // yeah, that's ugly
+        // Method to create function that sample signal 
+        // from given generator and assign a name to it
         Func<(string name, ndarray signal)> SignalFactory(ISignalGenerator g, string signalLetter)
             => () => (
                 signalLetter,
                 g.Sample(args.Points)
             );
-
 
         //this one creates signal sources
         var generationOperation = LazyTrackedOperation.Factory(
@@ -69,7 +69,7 @@ public partial class CompositeComponentViewModel
         //this one applies filters/transformations/normalizations/etc
         var createdSignal = combineSources.Composition(
             [s=>s.at(1), // first select Y dimension
-            // then apply filters,transforms,etc
+            // then apply filters,transforms, normalizations,etc
             ..
             ops.Select(v=>(Func<ndarray,ndarray>)v.Compute)]
         );
@@ -82,17 +82,19 @@ public partial class CompositeComponentViewModel
             CompletedPercent = percent;
         };
 
-        // this one starts this operations chain computation
+        // this one starts operations chain signal computation
         createdSignal.Run();
 
-        // this one tells whether the signal is still computing
+        // this one tells whether the computation is still computing
         //createdSignal.IsRunning
 
+        //keep track of running task so it is not lost by GC
         _createdSignal = createdSignal;
+
         // This one tells how long it took to create signal so far
         //createdSignal.ElapsedMilliseconds
 
-        // if something broke when computing
+        // if something broke when computing show error
         createdSignal.OnException += e =>
         {
             ErrorHandlingUtils.ShowErrorWindow(e);
@@ -125,6 +127,26 @@ public partial class CompositeComponentViewModel
                     PlotLine();
                 });
             }
+        };
+
+        // this one computes all signal statistics
+        (ndarray stat,string name) ComputeStatistic(ndarray signal, ISignalStatistic stat)
+        {
+            return (stat.Compute(signal),stat.Name);
+        }
+
+        var signalStatistics = createdSignal.Transform(
+            AvailableSignalStatistics.Select(
+                stat=>(Func<ndarray,(ndarray stat,string name)>)(
+                    signal=>ComputeStatistic(signal,stat)
+                )
+            ).ToArray()
+        );
+
+        signalStatistics.OnExecutionDone += res =>
+        {
+            //res of type (ndarray stat, string name)[]
+            // i need to show statistics
         };
     }
 

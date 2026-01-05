@@ -29,27 +29,30 @@ public class AddNormalNoiseFilter : IFilter
 {
     private readonly float _mean;
     private readonly float _std;
+    private readonly np.random _rand;
 
-    public AddNormalNoiseFilter(float mean = 0, float std = 1)
+    public AddNormalNoiseFilter(float mean = 0, float std = 1, int seed = -1)
     {
         if (std < 0)
             throw new ArgumentException("Standard deviation must be non-negative");
 
         _mean = mean;
         _std = std;
+        _rand = new np.random();
+        if (seed >= 0)
+            _rand.seed(seed);
     }
 
     public ndarray Compute(ndarray signal)
     {
-        var rand = new np.random();
         var noise = np.zeros_like(signal);
 
-        noise += rand.randn(signal.shape);
+        noise += _rand.randn(signal.shape);
 
         var j = new Complex(0, 1).ToNdarray();
         if (signal.Dtype == np.Complex)
         {
-            var to_add = rand.randn(signal.shape).astype(np.Complex) * j;
+            var to_add = _rand.randn(signal.shape).astype(np.Complex) * j;
             noise += to_add;
         }
 
@@ -269,7 +272,7 @@ public class BilateralFilter : IFilter
 
         q[q<0]=0; //move away a lot
         q[q>=signal.shape[0]]=signal.shape[0]-1;
-        var Gs = _gaussian(np.absolute(p-q),SigmaS);
+        var Gs = _gaussian(np.sqrt(np.power(p-q,2)),SigmaS);
         
         var Gr = _gaussian(signal.A(p)-signal.A(q),SigmaR);
         var prod = validItemsMask*Gs*Gr;
