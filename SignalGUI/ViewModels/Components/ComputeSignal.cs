@@ -7,6 +7,7 @@ using NumpyDotNet;
 using Avalonia.Threading;
 using System.Collections.Generic;
 using SignalGUI.Utils;
+using SignalGUI.ViewModels;
 
 namespace SignalGUI.ViewModels;
 
@@ -132,14 +133,15 @@ public partial class CompositeComponentViewModel
         createdSignal.Run();
 
         // this one computes all signal statistics
-        (ndarray stat,string name) ComputeStatistic(ndarray signal, ISignalStatistic stat)
+        (float stat,string name) ComputeStatistic(ndarray signal, ISignalStatistic stat)
         {
-            return (stat.Compute(signal),stat.Name);
+            var value = np.round(stat.Compute(signal),3).AsFloatArray()[0];
+            return (value,stat.Name);
         }
 
         var signalStatistics = createdSignal.Transform(
             AvailableSignalStatistics.Select(
-                stat=>(Func<ndarray,(ndarray stat,string name)>)(
+                stat=>(Func<ndarray,(float stat,string name)>)(
                     signal=>ComputeStatistic(signal,stat)
                 )
             ).ToArray()
@@ -147,7 +149,18 @@ public partial class CompositeComponentViewModel
 
         signalStatistics.OnExecutionDone += res =>
         {
-            _createdSignalStatistics = res;
+            // res of type (float stat, string name)[]
+            System.Console.WriteLine($"Statistics computed: {res.Length} items");
+            foreach(var stat in res)
+            {
+                System.Console.WriteLine($"  {stat.name}: {stat.stat}");
+            }
+            var stats = res.Select(item => new SignalStatisticViewModel(item.name, item.stat)).ToArray();
+            // Need to dispatch to UI thread since this event is called from background thread
+            Dispatcher.UIThread.Post(() =>
+            {
+                SignalStatistics = stats;
+            });
         };
         signalStatistics.Run();
     }

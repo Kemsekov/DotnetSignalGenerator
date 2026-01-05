@@ -22,6 +22,7 @@
 
   <UserControl.Resources>
     <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
+    <converters:NullToBoolConverter x:Key="NullToBoolConverter" />
   </UserControl.Resources>
 
   <StackPanel Orientation="Vertical" Margin="10">
@@ -43,7 +44,7 @@
         <!-- Left Column: Parameter Editing Panel -->
         <StackPanel Grid.Column="0" Margin="0,0,10,0">
           <TextBlock Text="Parameters" Classes="SectionHeader" />
-          <ScrollViewer MaxHeight="220">
+          <ScrollViewer MaxHeight="250">
             <ItemsControl ItemsSource="{Binding CurrentParameters, Mode=OneWay}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
@@ -63,7 +64,7 @@
           <TextBlock Text="Source Group" Classes="SectionHeader" />
 
           <!-- Dynamic Source List with ScrollViewer -->
-          <ScrollViewer MaxHeight="150" Margin="0,0,0,10">
+          <ScrollViewer MaxHeight="250" Margin="0,0,0,10">
             <ItemsControl ItemsSource="{Binding Sources}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="vm:SourceItemViewModel">
@@ -132,7 +133,7 @@
           <TextBlock Text="Filter Group" Classes="SectionHeader" />
 
           <!-- Dynamic Filter List with Drag and Drop and ScrollViewer -->
-          <ScrollViewer MaxHeight="150" Margin="0,0,0,10">
+          <ScrollViewer MaxHeight="250" Margin="0,0,0,10">
             <ListBox Name="FilterList" ItemsSource="{Binding Filters}"
                      SelectionMode="Single" BorderThickness="0" Background="Transparent">
               <ListBox.ItemTemplate>
@@ -183,22 +184,55 @@
         </StackPanel>
       </Grid>
     </Border>
-    <!-- Chart Area -->
-    <Border Classes="SectionBorder" Margin="10,10,10,10">
-      <StackPanel Orientation="Vertical">
-        <TextBlock Text="Signal Plot" Classes="SectionHeader" Margin="0,0,0,5" />
-        <Grid RowDefinitions="Auto,*" Margin="0,5,0,0">
-          <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
-            <Button Content="Plot Line" Command="{Binding PlotLineCommand}" Margin="0,0,10,0" />
-            <Button Content="Plot Scatter" Command="{Binding PlotScatterCommand}" Margin="0,0,10,0" />
-            <Button Content="Clear Plot" Command="{Binding ClearPlotCommand}" />
-          </StackPanel>
-          <Grid Grid.Row="1" Name="ChartGrid" Height="400">
-            <lvc:CartesianChart x:Name="SignalChart" Series="{Binding Series}"
-                                XAxes="{Binding XAxes}" YAxes="{Binding YAxes}" />
+    
+    <!-- Chart Area with Statistics Panel Side by Side -->
+    <Grid RowDefinitions="*" Margin="10,10,10,10">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="3*" />
+        <ColumnDefinition Width="1*" />
+      </Grid.ColumnDefinitions>
+      <Border Grid.Column="0" Classes="SectionBorder" Margin="0,0,5,0">
+        <StackPanel Orientation="Vertical">
+          <TextBlock Text="Signal Plot" Classes="SectionHeader" Margin="0,0,0,5" />
+          <Grid RowDefinitions="Auto,*" Margin="0,5,0,0">
+            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
+              <Button Content="Plot Line" Command="{Binding PlotLineCommand}" Margin="0,0,10,0" />
+              <Button Content="Plot Scatter" Command="{Binding PlotScatterCommand}" Margin="0,0,10,0" />
+              <Button Content="Clear Plot" Command="{Binding ClearPlotCommand}" />
+            </StackPanel>
+            <Grid Grid.Row="1" Name="ChartGrid" Height="400">
+              <lvc:CartesianChart x:Name="SignalChart" Series="{Binding Series}"
+                                  XAxes="{Binding XAxes}" YAxes="{Binding YAxes}" />
+            </Grid>
           </Grid>
-        </Grid>
-      </StackPanel>
-    </Border>
+        </StackPanel>
+      </Border>
+
+      <!-- Statistics Panel -->
+      <Border Grid.Column="1" Classes="SectionBorder" Margin="5,0,0,0"
+              IsVisible="{Binding SignalStatistics, Converter={StaticResource NullToBoolConverter}, ConverterParameter=true}">
+        <StackPanel Orientation="Vertical">
+          <TextBlock Text="Signal Statistics" Classes="SectionHeader" Margin="0,0,0,5" />
+          <ScrollViewer>
+            <Grid Name="StatisticsGrid" ColumnDefinitions="*, *" Margin="0,5,0,0">
+              <ItemsControl Grid.Column="0" ItemsSource="{Binding SignalStatistics}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:SignalStatisticViewModel">
+                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="0,2" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <ItemsControl Grid.Column="1" ItemsSource="{Binding SignalStatistics}" Margin="2,0,0,0">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:SignalStatisticViewModel">
+                    <TextBlock Text="{Binding Stat, StringFormat='{}{0:F3}'}" Margin="0,2" HorizontalAlignment="Right" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Grid>
+          </ScrollViewer>
+        </StackPanel>
+      </Border>
+    </Grid>
   </StackPanel>
 </UserControl>
