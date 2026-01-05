@@ -7,27 +7,23 @@ namespace SignalGUI.ViewModels;
 
 public class SignalParameters
 {
-    public int Points { get; set; }
+    public int ComputePoints { get; set; }
+    public int RenderPoints { get; set; }
 
-    public SignalParameters(int points = 256)
+    public SignalParameters(int computePoints = 1024,int renderPoints=256)
     {
-        Points = points;
+        if(computePoints<=0 || renderPoints<=0)
+            throw new ArgumentException("computePoints and renderPoints must be positive numbers!");
+        ComputePoints = computePoints;
+        RenderPoints=renderPoints;
+        
     }
 
     public static GuiObjectFactory CreateFactory()
     {
-
-        var type = typeof(SignalParameters);
-        var factory = new GuiObjectFactory(
-            type,
-            type.GetSupportedConstructor(ArgumentsTypesUtils.SupportedTypes)
-            ?? throw new ArgumentException("Failed to find supported constructor"), 
-            "Signal Parameters"
-        );
-        
-        // Set default values
-        factory.InstanceArguments["points"] = 256;
-
-        return factory;
+        var ctor = 
+            typeof(SignalParameters)
+            .GetSupportedConstructor(ArgumentsTypesUtils.SupportedTypes);
+        return new GuiObjectFactory(typeof(SignalParameters),ctor ?? throw new Exception());
     }
 }

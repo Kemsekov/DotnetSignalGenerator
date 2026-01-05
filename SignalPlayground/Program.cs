@@ -4,11 +4,11 @@ using SignalCore;
 using SignalCore.Computation;
 
 var b = new BilateralFilter(1,1,windowSize:2);
-
 var s = np.array([1,2,3.2,3.5,4,9,5,5.5,6,6.2]);
-var approx = b.Compute(s);
-System.Console.WriteLine(np.round(s,2));
-System.Console.WriteLine(np.round(approx,2));
+var t = np.arange(s.shape[0]);
+var interpt = np.array([1,2,3]);
+System.Console.WriteLine(np.interp(interpt,t,s));
+
 
 return;
 

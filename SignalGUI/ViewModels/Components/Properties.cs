@@ -44,8 +44,12 @@ public partial class CompositeComponentViewModel : ViewModelBase
     [ObservableProperty]
     private GuiObjectFactory? _signalParams = SignalParameters.CreateFactory();
 
+    public SignalParameters SignalParameters => SignalParams?.GetInstance() as SignalParameters ?? 
+                throw new ArgumentException("Failed to cast SignalParameters");
+
     static List<GuiObjectFactory> _GetImplementationFactories(params Type[] t)
     {
+        
         return t.SelectMany(v=>v.GetAllImplementations())
         .Select(type=>
             new{type, ctor=type.GetSupportedConstructor(ArgumentsTypesUtils.SupportedTypes)}

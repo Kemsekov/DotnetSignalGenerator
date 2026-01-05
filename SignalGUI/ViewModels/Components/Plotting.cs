@@ -12,6 +12,7 @@ using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 using Avalonia.Threading;
 using SkiaSharp;
+using NWaves.Filters.Bessel;
 
 namespace SignalGUI.ViewModels;
 
@@ -23,14 +24,25 @@ public partial class CompositeComponentViewModel
     {
         if (_xValues != null && _yValues != null)
         {
+            
+            var xmax = _xValues.Max();
+            var xmin = _xValues.Min();
+            double r = 0;
+            var interpolateX = np.linspace(xmin,xmax,ref r,SignalParameters.RenderPoints);
+            var x = np.array(_xValues,copy:false);
+            var y = np.array(_yValues,copy:false);
+
+            var interpolateY =  np.interp(interpolateX,x,y);
+
             Series.Clear();
             Series.Add(
-                RenderUtils.Plot("Real",_xValues, _yValues,color: SKColors.Blue)
+                RenderUtils.Plot("Real",interpolateX.AsFloatArray(), interpolateY.AsFloatArray(),color: SKColors.Blue)
             );
             if(_yImagValues is not null)
             {
+                var yImag = np.array(_yImagValues,copy:false);
                 Series.Add(
-                    RenderUtils.Plot("Imag",_xValues, _yImagValues,color: SKColors.Orange)
+                    RenderUtils.Plot("Imag",interpolateX.AsFloatArray(), yImag.AsFloatArray(),color: SKColors.Orange)
                 );
             }
 
@@ -45,14 +57,25 @@ public partial class CompositeComponentViewModel
     {
         if (_xValues != null && _yValues != null)
         {
+            
+            var xmax = _xValues.Max();
+            var xmin = _xValues.Min();
+            double r = 0;
+            var interpolateX = np.linspace(xmin,xmax,ref r,SignalParameters.RenderPoints);
+            var x = np.array(_xValues,copy:false);
+            var y = np.array(_yValues,copy:false);
+
+            var interpolateY =  np.interp(interpolateX,x,y);
+
             Series.Clear();
             Series.Add(
-                RenderUtils.Scatter("Real",_xValues, _yValues)
+                RenderUtils.Scatter("Real",interpolateX.AsFloatArray(), interpolateY.AsFloatArray(),color: SKColors.Blue)
             );
             if(_yImagValues is not null)
             {
+                var yImag = np.array(_yImagValues,copy:false);
                 Series.Add(
-                    RenderUtils.Scatter("Imag",_xValues, _yImagValues)
+                    RenderUtils.Scatter("Imag",interpolateX.AsFloatArray(), yImag.AsFloatArray(),color: SKColors.Orange)
                 );
             }
 

@@ -31,7 +31,7 @@ public class AddNormalNoiseFilter : IFilter
     private readonly float _std;
     private readonly np.random _rand;
 
-    public AddNormalNoiseFilter(float mean = 0, float std = 1, int seed = -1)
+    public AddNormalNoiseFilter(float mean = 0, float std = 1, int seed = 0)
     {
         if (std < 0)
             throw new ArgumentException("Standard deviation must be non-negative");

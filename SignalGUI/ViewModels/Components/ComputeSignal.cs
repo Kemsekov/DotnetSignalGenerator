@@ -43,7 +43,7 @@ public partial class CompositeComponentViewModel
         Func<(string name, ndarray signal)> SignalFactory(ISignalGenerator g, string signalLetter)
             => () => (
                 signalLetter,
-                g.Sample(args.Points)
+                g.Sample(args.ComputePoints)
             );
 
         //this one creates signal sources
@@ -139,6 +139,7 @@ public partial class CompositeComponentViewModel
             return (value,stat.Name);
         }
 
+        //Compute all signal stats at parallel
         var signalStatistics = createdSignal.Transform(
             AvailableSignalStatistics.Select(
                 stat=>(Func<ndarray,(float stat,string name)>)(
@@ -186,8 +187,7 @@ public partial class CompositeComponentViewModel
                 .Where(s => s != null)
                 .ToList();
 
-            args = SignalParams?.GetInstance() as SignalParameters ?? 
-                throw new ArgumentException("Failed to cast SignalParameters");
+            args = SignalParameters;
             generators = sources
                 .Where(s => s.instance is ISignalGenerator)
                 .Select(s => (
