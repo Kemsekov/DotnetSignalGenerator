@@ -198,11 +198,14 @@
             <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
               <Button Content="Plot Line" Command="{Binding PlotLineCommand}" Margin="0,0,10,0" />
               <Button Content="Plot Scatter" Command="{Binding PlotScatterCommand}" Margin="0,0,10,0" />
+              <Button Content="Plot 2D Image" Command="{Binding Plot2DImageCommand}" Margin="0,0,10,0" />
               <Button Content="Clear Plot" Command="{Binding ClearPlotCommand}" />
             </StackPanel>
             <Grid Grid.Row="1" Name="ChartGrid" Height="400">
-              <lvc:CartesianChart x:Name="SignalChart" Series="{Binding Series}"
-                                  XAxes="{Binding XAxes}" YAxes="{Binding YAxes}" />
+              <Image Source="{Binding RenderedImage}" IsVisible="{Binding RenderedImage, Converter={StaticResource NullToBoolConverter}, ConverterParameter=true}" />
+              <lvc:CartesianChart Series="{Binding Series}"
+                                  XAxes="{Binding XAxes}" YAxes="{Binding YAxes}"
+                                  IsVisible="{Binding RenderedImage, Converter={StaticResource NullToBoolConverter}, ConverterParameter=false}" />
             </Grid>
           </Grid>
         </StackPanel>

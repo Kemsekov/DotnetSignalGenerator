@@ -16,6 +16,12 @@ public partial class CompositeComponentViewModel
     [RelayCommand]
     private void ComputeSignal()
     {
+        Series.Clear();
+        RenderedImage=null;
+        _xValues=null;
+        _yValues=null;
+        _yImagValues=null;
+
         if (Sources.Count == 0) return;
         if (Expression == "")
             Expression = "A"; // just identity of first signal
@@ -83,8 +89,6 @@ public partial class CompositeComponentViewModel
             CompletedPercent = percent;
         };
 
-
-
         // this one tells whether the computation is still computing
         //createdSignal.IsRunning
 
@@ -105,9 +109,10 @@ public partial class CompositeComponentViewModel
         {
             var genOut = combineSources?.Result;
             System.Console.WriteLine("====================");
-            System.Console.WriteLine(res.shape);
-            System.Console.WriteLine(genOut?.shape);
-            // if we got single signal output of shape [1,N]
+            System.Console.WriteLine($"Time {genOut?.shape}");
+            System.Console.WriteLine($"Signal {res.shape}");
+            System.Console.WriteLine($"Signal dtype {res.Dtype}");
+            // if we got single signal output of shape [1,N] or [N]
             if (res.shape[0] == 1 && res.shape.iDims.Length == 2 || res.shape.iDims.Length == 1)
             {
                 if (res.Dtype == np.Complex)
@@ -125,6 +130,16 @@ public partial class CompositeComponentViewModel
                 Dispatcher.UIThread.Post(() =>
                 {
                     PlotLine();
+                });
+            }
+
+            // if we have 2d array, then render it as image
+            if(res.shape[0]>1 && res.shape.iDims.Length == 2)
+            {
+                _2DData = res;
+                Dispatcher.UIThread.Post(() =>
+                {
+                    Plot2DImage();
                 });
             }
         };
@@ -151,11 +166,7 @@ public partial class CompositeComponentViewModel
         signalStatistics.OnExecutionDone += res =>
         {
             // res of type (float stat, string name)[]
-            System.Console.WriteLine($"Statistics computed: {res.Length} items");
-            foreach(var stat in res)
-            {
-                System.Console.WriteLine($"  {stat.name}: {stat.stat}");
-            }
+
             var stats = res.Select(item => new SignalStatisticViewModel(item.name, item.stat)).ToArray();
             // Need to dispatch to UI thread since this event is called from background thread
             Dispatcher.UIThread.Post(() =>

@@ -18,14 +18,14 @@ public partial class CompositeComponentViewModel
     [RelayCommand]
     public void AddSources(GuiObjectFactory selectedSourceType)
     {
-
+        
         if (selectedSourceType == null) return;
 
         var letter = GetNextLetter();
         var sourceItem = new SourceItemViewModel
         {
             Letter = letter,
-            Factory = selectedSourceType // Store the factory instead of a string
+            Factory = selectedSourceType.Clone() // Store the factory instead of a string
         };
 
         Sources.Add(sourceItem);
@@ -47,7 +47,7 @@ public partial class CompositeComponentViewModel
 
         var filterItem = new FilterItemViewModel
         {
-            Factory = selectedFilterType // Store the factory instead of a string
+            Factory = selectedFilterType.Clone() // Store the factory instead of a string
         };
 
         Filters.Add(filterItem);
