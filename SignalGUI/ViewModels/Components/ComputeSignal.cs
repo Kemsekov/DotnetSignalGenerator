@@ -23,7 +23,7 @@ public partial class CompositeComponentViewModel
         _yImagValues=null;
 
         if (Sources.Count == 0) return;
-        if (Expression == "")
+        if (Expression == "") //if empty
             Expression = "A"; // just identity of first signal
 
         CompletedPercent = 0;

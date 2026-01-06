@@ -116,6 +116,12 @@ public partial class CompositeComponentViewModel
     {
         if (_2DData != null)
         {
+            var renderPoints = SignalParameters.RenderPoints;
+            var shape = _2DData.shape.iDims.ToArray();
+            shape=shape.Select(v=>v>renderPoints ? renderPoints : v).ToArray();
+
+            _2DData=_2DData.resample(shape);
+
             SKImage skImage;
             if (_2DData.Dtype == np.Complex)
             {
