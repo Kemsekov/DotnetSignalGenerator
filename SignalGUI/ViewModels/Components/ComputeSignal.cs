@@ -92,12 +92,6 @@ public partial class CompositeComponentViewModel
     [RelayCommand]
     private void ComputeSignal()
     {
-        Series.Clear();
-        RenderedImage=null;
-        _xValues=null;
-        _yValues=null;
-        _yImagValues=null;
-
         if (Sources.Count == 0) return;
         if (Expression == "") //if empty
             Expression = "A"; // just identity of first signal
@@ -137,6 +131,10 @@ public partial class CompositeComponentViewModel
             CompletedPercent = percent;
         };
 
+        computeSignal.signalStatistics.CancelState.OnCancel+=()=>{
+            CompletedPercent = -1;
+        };
+
         // if something broke when computing show error
         computeSignal.signalStatistics.OnException += e =>
         {
@@ -146,6 +144,11 @@ public partial class CompositeComponentViewModel
         // This event called once computation is completed
         computeSignal.createdSignal.OnExecutionDone += res =>
         {
+            RenderedImage=null;
+            _xValues=null;
+            _yValues=null;
+            _yImagValues=null;
+
             var genOut = computeSignal.combineSources?.Result;
             System.Console.WriteLine("====================");
             System.Console.WriteLine($"Time {genOut?.shape}");
@@ -193,9 +196,15 @@ public partial class CompositeComponentViewModel
         _computeSignal=computeSignal;
     }
 
+    [RelayCommand]
+    private void Cancel()
+    {
+        _computeSignal?.Cancel();
+    }
+
     Exception? ParseComputeArguments(
         out SignalParameters? s,
-        out IEnumerable<(string letter, ISignalGenerator instance)>? generators, 
+        out IEnumerable<(string letter, ISignalGenerator instance)>? generators,
         out IEnumerable<ISignalOperation>? ops)
     {
         try{
