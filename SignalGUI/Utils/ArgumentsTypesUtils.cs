@@ -121,5 +121,6 @@ namespace SignalGUI.Utils
 
         throw e ?? new InvalidCastException($"Cannot cast/convert value of type {vt.FullName} to {t.FullName}.");
     }
+    
 }
 }

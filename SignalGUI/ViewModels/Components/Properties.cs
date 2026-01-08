@@ -9,9 +9,34 @@ using NumpyDotNet;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 using Avalonia.Media.Imaging;
+using DynamicData;
 
 namespace SignalGUI.ViewModels;
 
+/// <summary>
+/// This class represents a signal GUI instance with all required fields,
+/// so that we can have multiple instances of signal computation/renders 
+/// at the same time and we can switch signals view on GUI if we wish.
+/// </summary>
+public class GuiSignalInstance
+{
+    public required ComputeSignal? ComputeSignal;
+    public required SignalStatisticViewModel[]? SignalStatistics;
+    public required string ObjectName;
+    public required int CompletedPercent;
+    public required string Expression;
+    public required int NextSourceLetterIndex;
+    public required IEnumerable<SourceItemViewModel> Sources;
+    public required IEnumerable<FilterItemViewModel> Filters;
+    public required GuiObjectFactory? SignalParams;
+
+    // Chart properties
+    public required IEnumerable<ISeries> Series;
+    public required IEnumerable<Axis> XAxes;
+    public required IEnumerable<Axis> YAxes;
+    // Property to hold the rendered 2D image
+    public required Bitmap? RenderedImage;
+}
 
 public partial class CompositeComponentViewModel : ViewModelBase
 {
@@ -46,16 +71,57 @@ public partial class CompositeComponentViewModel : ViewModelBase
     private ObservableCollection<ParameterViewModelWithCallback> _currentParameters = new();
 
     // --------------------
+    /// <summary>
+    /// Method to get snapshot of current GUI
+    /// </summary>
+    public GuiSignalInstance SaveGuiInstance()
+    {
+        return new()
+        {
+            ComputeSignal = _computeSignal,
+            SignalStatistics = SignalStatistics,
+            ObjectName = ObjectName,
+            CompletedPercent = CompletedPercent,
+            Expression = Expression,
+            NextSourceLetterIndex = _nextSourceLetterIndex,
+            Sources = Sources,
+            Filters = Filters,
+            SignalParams = SignalParams,
+            Series = Series,
+            XAxes = XAxes,
+            YAxes = YAxes,
+            RenderedImage = RenderedImage
+        };
+    }
+    /// <summary>
+    /// Method to load snapshot of current GUI
+    /// </summary>
+    public void LoadGuiInstance(GuiSignalInstance instance)
+    {
+        _computeSignal = instance.ComputeSignal;
+        SignalStatistics = instance.SignalStatistics;
+        ObjectName = instance.ObjectName;
+        CompletedPercent = instance.CompletedPercent;
+        Expression = instance.Expression;
+        _nextSourceLetterIndex = instance.NextSourceLetterIndex;
+        Sources.Clear();
+        Sources.AddRange(instance.Sources);
+        Filters.Clear();
+        Filters.AddRange(instance.Filters);
+        SignalParams = instance.SignalParams;
+        Series.Clear();
+        Series.AddRange(instance.Series);
+        XAxes = [.. instance.XAxes];
+        YAxes = [.. instance.YAxes];
+        RenderedImage = instance.RenderedImage;
+    }
+
     ComputeSignal? _computeSignal;
+    [ObservableProperty]
     SignalStatisticViewModel[]? _signalStatistics;
 
     [ObservableProperty]
     private string _objectName = "NewObject";
-    public SignalStatisticViewModel[]? SignalStatistics
-    {
-        get => _signalStatistics;
-        private set => SetProperty(ref _signalStatistics, value);
-    }
 
     [ObservableProperty]
     private int _completedPercent = 0;
@@ -65,15 +131,12 @@ public partial class CompositeComponentViewModel : ViewModelBase
     private int _nextSourceLetterIndex = 0;
     public ObservableCollection<SourceItemViewModel> Sources { get; set; } = new();
     public ObservableCollection<FilterItemViewModel> Filters { get; set; } = new();
-
+    public List<string> AvailableSourcesForExpression => Sources.Select(s => s.Letter).ToList();
     [ObservableProperty]
     private GuiObjectFactory? _signalParams = SignalParameters.CreateFactory();
 
     public SignalParameters SignalParameters => SignalParams?.GetInstance() as SignalParameters ?? 
                 throw new ArgumentException("Failed to cast SignalParameters");
-
-    public List<string> AvailableSourcesForExpression => Sources.Select(s => s.Letter).ToList();
-
     // Chart properties
     [ObservableProperty]
     private ObservableCollection<ISeries> _series = new();
@@ -83,13 +146,8 @@ public partial class CompositeComponentViewModel : ViewModelBase
 
     [ObservableProperty]
     private List<Axis> _yAxes = new() { new Axis { Name = "Amplitude" } };
-
-
+    
     // Property to hold the rendered 2D image
+    [ObservableProperty]
     private Bitmap? _renderedImage;
-    public Bitmap? RenderedImage
-    {
-        get => _renderedImage;
-        private set => SetProperty(ref _renderedImage, value);
-    }
 }

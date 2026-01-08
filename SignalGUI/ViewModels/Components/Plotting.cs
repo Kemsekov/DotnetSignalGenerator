@@ -10,8 +10,6 @@ namespace SignalGUI.ViewModels;
 
 public partial class CompositeComponentViewModel
 {
-
-
     // Chart commands
     [RelayCommand]
     private void PlotLine()
