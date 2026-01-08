@@ -193,4 +193,17 @@ public partial class CompositeComponentView : UserControl
             }
         }
     }
+
+    private void OnSavedInstanceSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox comboBox &&
+            DataContext is CompositeComponentViewModel viewModel)
+        {
+            // When a saved instance is selected, trigger the load command
+            if (viewModel.LoadGuiInstanceCommand?.CanExecute(null) == true)
+            {
+                viewModel.LoadGuiInstanceCommand.Execute(null);
+            }
+        }
+    }
 }

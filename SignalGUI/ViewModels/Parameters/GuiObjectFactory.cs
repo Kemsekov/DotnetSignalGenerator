@@ -58,7 +58,10 @@ public class GuiObjectFactory : ICloneable
     {
         return new GuiObjectFactory(
             ObjType,_ctor_arguments,_objectName
-        );
+        )
+        {
+            InstanceArguments=InstanceArguments.ToDictionary(v=>v.Key,v=>v.Value)
+        };
     }
 
     object ICloneable.Clone()

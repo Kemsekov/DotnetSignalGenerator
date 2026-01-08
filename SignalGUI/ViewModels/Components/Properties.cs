@@ -2,7 +2,9 @@ using System;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using SignalCore;
 using SignalGUI.Utils;
 using NumpyDotNet;
@@ -15,29 +17,28 @@ namespace SignalGUI.ViewModels;
 
 /// <summary>
 /// This class represents a signal GUI instance with all required fields,
-/// so that we can have multiple instances of signal computation/renders 
+/// so that we can have multiple instances of signal computation/renders
 /// at the same time and we can switch signals view on GUI if we wish.
 /// </summary>
-public class GuiSignalInstance
+public partial class GuiSignalInstance : ObservableObject
 {
+    [ObservableProperty]
+    string _objectName = "";
     public required ComputeSignal? ComputeSignal;
-    public required SignalStatisticViewModel[]? SignalStatistics;
-    public required string ObjectName;
+    public required (string name, float stat)[]? SignalStatistics;
     public required int CompletedPercent;
     public required string Expression;
     public required int NextSourceLetterIndex;
-    public required IEnumerable<SourceItemViewModel> Sources;
-    public required IEnumerable<FilterItemViewModel> Filters;
+    public required IEnumerable<GuiObjectFactory?> Sources;
+    public required IEnumerable<(bool visible, GuiObjectFactory? factory)> Filters;
     public required GuiObjectFactory? SignalParams;
 
     // Chart properties
     public required IEnumerable<ISeries> Series;
     public required IEnumerable<Axis> XAxes;
     public required IEnumerable<Axis> YAxes;
-    // Property to hold the rendered 2D image
-    public required Bitmap? RenderedImage;
+    public required Bitmap? Image;
 }
-
 public partial class CompositeComponentViewModel : ViewModelBase
 {
     static List<GuiObjectFactory> _GetImplementationFactories(params Type[] t)
@@ -67,7 +68,7 @@ public partial class CompositeComponentViewModel : ViewModelBase
 
     [ObservableProperty]
     private FilterItemViewModel? _selectedFilter;
-        [ObservableProperty]
+    [ObservableProperty]
     private ObservableCollection<ParameterViewModelWithCallback> _currentParameters = new();
 
     // --------------------
@@ -78,42 +79,92 @@ public partial class CompositeComponentViewModel : ViewModelBase
     {
         return new()
         {
-            ComputeSignal = _computeSignal,
-            SignalStatistics = SignalStatistics,
+            ComputeSignal = _computeSignal?.Clone(),
+            SignalStatistics = 
+                SignalStatistics?
+                .Select(v=>(v.Name,v.Stat))
+                .ToArray(),
             ObjectName = ObjectName,
             CompletedPercent = CompletedPercent,
             Expression = Expression,
             NextSourceLetterIndex = _nextSourceLetterIndex,
-            Sources = Sources,
-            Filters = Filters,
-            SignalParams = SignalParams,
-            Series = Series,
-            XAxes = XAxes,
-            YAxes = YAxes,
-            RenderedImage = RenderedImage
+            Sources = 
+                Sources.Select(v=>v.Factory?.Clone()).ToArray(),
+            Filters = 
+                Filters
+                .Select(v=>(v.Enabled,v.Factory?.Clone())).ToArray(),
+            SignalParams = SignalParams?.Clone(),
+            Series = Series.ToArray(),
+            XAxes = XAxes.ToArray(),
+            YAxes = YAxes.ToArray(),
+            Image=RenderedImage
         };
     }
+
+    /// <summary>
+    /// Method to save current GUI state with a name
+    /// </summary>
+    public void SaveGuiInstance(string name)
+    {
+        var instance = SaveGuiInstance();
+        instance.ObjectName = name; // Update the name to the provided one
+
+        // Check if an instance with the same name already exists
+        var existingIndex = -1;
+        for (int i = 0; i < SavedGuiInstances.Count; i++)
+            if (SavedGuiInstances[i].ObjectName == name)
+            {
+                existingIndex = i;
+                break;
+            }
+
+        if (existingIndex >= 0)
+        {
+            // Replace the existing instance
+            SavedGuiInstances[existingIndex] = instance;
+        }
+        else
+            // Add the new instance
+            SavedGuiInstances.Add(instance);
+    }
+
     /// <summary>
     /// Method to load snapshot of current GUI
     /// </summary>
     public void LoadGuiInstance(GuiSignalInstance instance)
     {
         _computeSignal = instance.ComputeSignal;
-        SignalStatistics = instance.SignalStatistics;
+
+        var stats = instance.SignalStatistics?.Select(v=> new SignalStatisticViewModel(v.name,v.stat)).ToArray();
+        if(stats is not null)
+            SignalStatistics = stats;
         ObjectName = instance.ObjectName;
         CompletedPercent = instance.CompletedPercent;
         Expression = instance.Expression;
         _nextSourceLetterIndex = instance.NextSourceLetterIndex;
+        
         Sources.Clear();
-        Sources.AddRange(instance.Sources);
+        Sources.AddRange(instance.Sources.Select(v=>new SourceItemViewModel
+        {
+            Factory=v
+        }));
+
         Filters.Clear();
-        Filters.AddRange(instance.Filters);
+        Filters.AddRange(instance.Filters.Select(v=>new FilterItemViewModel
+        {
+            Enabled=v.visible,
+            Factory=v.factory
+        }));
+        ReassignSourceLetters();
+        CurrentParameters = new();
+
         SignalParams = instance.SignalParams;
         Series.Clear();
         Series.AddRange(instance.Series);
+        RenderedImage = instance.Image;
+
         XAxes = [.. instance.XAxes];
         YAxes = [.. instance.YAxes];
-        RenderedImage = instance.RenderedImage;
     }
 
     ComputeSignal? _computeSignal;
@@ -150,4 +201,39 @@ public partial class CompositeComponentViewModel : ViewModelBase
     // Property to hold the rendered 2D image
     [ObservableProperty]
     private Bitmap? _renderedImage;
+
+    // Collection to store saved GUI instances
+    public ObservableCollection<GuiSignalInstance> SavedGuiInstances { get; set; } = new();
+    
+    // Command to save the current GUI instance
+    [ObservableProperty]
+    private ICommand? _saveGuiInstanceCommand;
+
+    // Command to load a selected GUI instance
+    [ObservableProperty]
+    private ICommand? _loadGuiInstanceCommand;
+
+    // Property to track the selected GUI instance from the dropdown
+    [ObservableProperty]
+    private GuiSignalInstance? _selectedGuiInstance;
+
+    // Initialize the commands in the constructor
+    public CompositeComponentViewModel()
+    {
+        SaveGuiInstanceCommand = new RelayCommand(SaveCurrentGuiInstance);
+        LoadGuiInstanceCommand = new RelayCommand(LoadSelectedGuiInstance);
+    }
+
+    private void SaveCurrentGuiInstance()
+    {
+        SaveGuiInstance(ObjectName); // Use the current ObjectName as the instance name
+    }
+
+    private void LoadSelectedGuiInstance()
+    {
+        if (SelectedGuiInstance != null)
+        {
+            LoadGuiInstance(SelectedGuiInstance);
+        }
+    }
 }

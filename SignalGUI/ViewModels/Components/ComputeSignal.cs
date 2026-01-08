@@ -15,11 +15,11 @@ namespace SignalGUI.ViewModels;
 /// <summary>
 /// Class that implements non-blocking signal's computation logic
 /// </summary>
-public class ComputeSignal
+public class ComputeSignal : ICloneable
 {
     TrackedOperation<ndarray> combineSources;
     TrackedOperation<ndarray> createdSignal;
-    TrackedOperation<(float stat, string name)[]> signalStatistics {get;}
+    TrackedOperation<(float stat, string name)[]> signalStatistics;
 
     // Properties to hold 1d signal data
     public float[]? X{get;protected set;}
@@ -36,6 +36,12 @@ public class ComputeSignal
         IEnumerable<ISignalOperation> ops,
         IEnumerable<ISignalStatistic> statistics)
     {
+        ComputePoints = computePoints;
+        Generators = generators;
+        Expression = expression;
+        Ops = ops;
+        Statistics = statistics;
+        
         var expr = new StringExpression(expression);
         // Method to create function that sample signal 
         // from given generator and assign a name to it
@@ -126,11 +132,18 @@ public class ComputeSignal
             }
             OnExecutionDone.Invoke();
         };
-        signalStatistics.OnExecutedStep+=OnExecutedStep.Invoke;
-        signalStatistics.CancelState.OnCancel+=OnCancel.Invoke;
-        signalStatistics.OnException+=OnException.Invoke;
+        signalStatistics.OnExecutedStep+=i=>OnExecutedStep(i);
+        signalStatistics.CancelState.OnCancel+= ()=>OnCancel();
+        signalStatistics.OnException+= e=> OnException(e);
     }
     public float PercentCompleted => signalStatistics.PercentCompleted;
+
+    public int ComputePoints { get; }
+    public IEnumerable<(string letter, ISignalGenerator instance)> Generators { get; }
+    public string Expression { get; }
+    public IEnumerable<ISignalOperation> Ops { get; }
+    public IEnumerable<ISignalStatistic> Statistics { get; }
+
     public Action OnCancel = ()=>{};
     public event Action<Exception> OnException = e=>{};
     public event Action<int> OnExecutedStep = i=>{};
@@ -139,6 +152,29 @@ public class ComputeSignal
     public void Run() => signalStatistics.Run();
     // Cancel computation
     public void Cancel()=>signalStatistics.Cancel();
+
+    public ComputeSignal Clone()
+    {
+        return new ComputeSignal(
+            ComputePoints,
+            Generators,
+            Expression,
+            Ops,
+            Statistics
+        )
+        {
+            ImageData=ImageData,
+            Stats=Stats,
+            X=X,
+            Y=Y,
+            YImag=YImag            
+        };
+    }
+
+    object ICloneable.Clone()
+    {
+        return Clone();
+    }
 }
 
 public partial class CompositeComponentViewModel
@@ -150,6 +186,7 @@ public partial class CompositeComponentViewModel
         if (Expression == "") //if empty
             Expression = "A"; // just identity of first signal
 
+        RenderedImage=null;
         CompletedPercent = 0;
 
         IEnumerable<(string letter, ISignalGenerator instance)>? generators;

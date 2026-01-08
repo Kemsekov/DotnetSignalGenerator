@@ -94,6 +94,7 @@ public partial class CompositeComponentViewModel
     private void ClearPlot()
     {
         Series.Clear();
+        RenderedImage=null;
     }
 
     [RelayCommand]
