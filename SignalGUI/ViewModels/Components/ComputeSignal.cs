@@ -1,3 +1,5 @@
+// TODO: separate somehow signal creation/plotting/UI gesture interaction
+// logic into separate classes
 using System;
 using System.Linq;
 using CommunityToolkit.Mvvm.Input;
@@ -7,49 +9,28 @@ using NumpyDotNet;
 using Avalonia.Threading;
 using System.Collections.Generic;
 using SignalGUI.Utils;
-using SignalGUI.ViewModels;
 
 namespace SignalGUI.ViewModels;
 
-public partial class CompositeComponentViewModel
+public class ComputeSignal
 {
-    [RelayCommand]
-    private void ComputeSignal()
+    public TrackedOperation<ndarray> combineSources{get;}
+    public TrackedOperation<ndarray> createdSignal {get;}
+    public TrackedOperation<(float stat, string name)[]> signalStatistics {get;}
+    public ComputeSignal(
+        int computePoints,
+        IEnumerable<(string letter, ISignalGenerator instance)> generators,
+        string expression,
+        IEnumerable<ISignalOperation> ops,
+        IEnumerable<ISignalStatistic> statistics)
     {
-        Series.Clear();
-        RenderedImage=null;
-        _xValues=null;
-        _yValues=null;
-        _yImagValues=null;
-
-        if (Sources.Count == 0) return;
-        if (Expression == "") //if empty
-            Expression = "A"; // just identity of first signal
-
-        CompletedPercent = 0;
-
-        SignalParameters? args;
-        IEnumerable<(string letter, ISignalGenerator instance)>? generators;
-        IEnumerable<ISignalOperation>? ops;
-        StringExpression? expr;
-        var parse = ParseComputeArguments(out args, out generators, out ops, out expr);
-        if(parse is Exception e)
-        {
-            //show exception
-            ErrorHandlingUtils.ShowErrorWindow(e);
-            return;
-        }
-
-        // to shut up warnings
-        if(args is null || generators is null || ops is null || expr is null)
-            return;
-
+        var expr = new StringExpression(expression);
         // Method to create function that sample signal 
         // from given generator and assign a name to it
         Func<(string name, ndarray signal)> SignalFactory(ISignalGenerator g, string signalLetter)
             => () => (
                 signalLetter,
-                g.Sample(args.ComputePoints)
+                g.Sample(computePoints)
             );
 
         //this one creates signal sources
@@ -58,7 +39,7 @@ public partial class CompositeComponentViewModel
         );
 
         // this one combines multiple sources into single signal
-        var combineSources =
+        combineSources =
             generationOperation
             .Transform(v =>
                 // drop X values before applying expression
@@ -74,40 +55,98 @@ public partial class CompositeComponentViewModel
             });
 
         //this one applies filters/transformations/normalizations/etc
-        var createdSignal = combineSources.Composition(
+        createdSignal = combineSources.Composition(
             [s=>s.at(1), // first select Y dimension
             // then apply filters,transforms, normalizations,etc
             ..
             ops.Select(v=>(Func<ndarray,ndarray>)v.Compute)]
         );
 
-        // Subscribe to the OnExecutedStep event to update completion percentage
-        createdSignal.OnExecutedStep += (_) =>
+        // this one computes all signal statistics
+        (float stat,string name) ComputeStatistic(ndarray signal, ISignalStatistic stat)
         {
+            var value = np.round(stat.Compute(signal),3).AsFloatArray()[0];
+            return (value,stat.Name);
+        }
+
+        //Compute all signal stats at parallel
+        signalStatistics = createdSignal.Transform(
+            statistics.Select(
+                stat=>(Func<ndarray,(float stat,string name)>)(
+                    signal=>ComputeStatistic(signal,stat)
+                )
+            ).ToArray()
+        );
+    }
+    //Run the latest chain element
+    public void Run() => signalStatistics.Run();
+    // Cancel computation
+    public void Cancel()=>signalStatistics.Cancel();
+}
+
+
+public partial class CompositeComponentViewModel
+{
+    ComputeSignal? _computeSignal;
+
+    [RelayCommand]
+    private void ComputeSignal()
+    {
+        Series.Clear();
+        RenderedImage=null;
+        _xValues=null;
+        _yValues=null;
+        _yImagValues=null;
+
+        if (Sources.Count == 0) return;
+        if (Expression == "") //if empty
+            Expression = "A"; // just identity of first signal
+
+        CompletedPercent = 0;
+
+        IEnumerable<(string letter, ISignalGenerator instance)>? generators;
+        IEnumerable<ISignalOperation>? ops;
+        SignalParameters s;
+        var expr=new StringExpression(Expression);
+        var parse = ParseComputeArguments(out s,out generators, out ops);
+        if(parse is Exception e)
+        {
+            //show exception
+            ErrorHandlingUtils.ShowErrorWindow(e);
+            return;
+        }
+
+        // to shut up warnings
+        if(generators is null || ops is null)
+            return;
+
+        var computeSignal = new ComputeSignal(
+            s?.ComputePoints ?? 1024,
+            generators,
+            Expression,
+            ops,
+            AvailableSignalStatistics
+        );
+
+        // Subscribe to the OnExecutedStep event to update completion percentage
+        computeSignal.signalStatistics.OnExecutedStep += (_) =>
+        {
+            var completed = computeSignal.createdSignal.PercentCompleted;
             // Update the CompletedPercent property by multiplying PercentCompleted by 100 and rounding to int
-            var percent = (int)Math.Round(createdSignal.PercentCompleted * 100);
+            var percent = (int)Math.Round(completed * 100);
             CompletedPercent = percent;
         };
 
-        // this one tells whether the computation is still computing
-        //createdSignal.IsRunning
-
-        //keep track of running task so it is not lost by GC
-        _createdSignal = createdSignal;
-
-        // This one tells how long it took to create signal so far
-        //createdSignal.ElapsedMilliseconds
-
         // if something broke when computing show error
-        createdSignal.OnException += e =>
+        computeSignal.signalStatistics.OnException += e =>
         {
-            ErrorHandlingUtils.ShowErrorWindow(e);
+            Dispatcher.UIThread.Post(()=>ErrorHandlingUtils.ShowErrorWindow(e));
         };
 
         // This event called once computation is completed
-        createdSignal.OnExecutionDone += res =>
+        computeSignal.createdSignal.OnExecutionDone += res =>
         {
-            var genOut = combineSources?.Result;
+            var genOut = computeSignal.combineSources?.Result;
             System.Console.WriteLine("====================");
             System.Console.WriteLine($"Time {genOut?.shape}");
             System.Console.WriteLine($"Signal {res.shape}");
@@ -127,43 +166,18 @@ public partial class CompositeComponentViewModel
                 _yValues = res.Real?.AsFloatArray();
                 // Automatically plot as a line chart after computation is done
                 // Need to dispatch to UI thread since this event is called from background thread
-                Dispatcher.UIThread.Post(() =>
-                {
-                    PlotLine();
-                });
+                Dispatcher.UIThread.Post(PlotLine);
             }
 
             // if we have 2d array, then render it as image
             if(res.shape[0]>1 && res.shape.iDims.Length == 2)
             {
                 _2DData = res;
-                Dispatcher.UIThread.Post(() =>
-                {
-                    Plot2DImage();
-                });
+                Dispatcher.UIThread.Post(Plot2DImage);
             }
         };
-        
-        // this one starts operations chain signal computation
-        createdSignal.Run();
 
-        // this one computes all signal statistics
-        (float stat,string name) ComputeStatistic(ndarray signal, ISignalStatistic stat)
-        {
-            var value = np.round(stat.Compute(signal),3).AsFloatArray()[0];
-            return (value,stat.Name);
-        }
-
-        //Compute all signal stats at parallel
-        var signalStatistics = createdSignal.Transform(
-            AvailableSignalStatistics.Select(
-                stat=>(Func<ndarray,(float stat,string name)>)(
-                    signal=>ComputeStatistic(signal,stat)
-                )
-            ).ToArray()
-        );
-
-        signalStatistics.OnExecutionDone += res =>
+        computeSignal.signalStatistics.OnExecutionDone += res =>
         {
             // res of type (float stat, string name)[]
 
@@ -174,14 +188,15 @@ public partial class CompositeComponentViewModel
                 SignalStatistics = stats;
             });
         };
-        signalStatistics.Run();
+
+        computeSignal.Run();
+        _computeSignal=computeSignal;
     }
 
     Exception? ParseComputeArguments(
-        out SignalParameters? args, 
+        out SignalParameters? s,
         out IEnumerable<(string letter, ISignalGenerator instance)>? generators, 
-        out IEnumerable<ISignalOperation>? ops, 
-        out StringExpression? expr)
+        out IEnumerable<ISignalOperation>? ops)
     {
         try{
             var sources = Sources
@@ -198,7 +213,6 @@ public partial class CompositeComponentViewModel
                 .Where(s => s != null)
                 .ToList();
 
-            args = SignalParameters;
             generators = sources
                 .Where(s => s.instance is ISignalGenerator)
                 .Select(s => (
@@ -210,17 +224,18 @@ public partial class CompositeComponentViewModel
                 .Where(s => s is ISignalOperation)
                 .Cast<ISignalOperation>()
                 .ToList();
-            expr = new StringExpression(Expression);
+            s = SignalParameters;
             return null;
         }
         catch(Exception e)
         {
-            args = null;
             generators = null;
             ops = null;
-            expr = null;
+            s=null;
             return e;
         }
+
+        
     }
     
 }

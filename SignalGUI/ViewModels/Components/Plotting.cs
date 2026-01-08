@@ -1,20 +1,11 @@
-using System;
-using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Linq;
-using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SignalCore;
-using SignalGUI.Utils;
-using SignalCore.Computation;
 using NumpyDotNet;
-using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
-using Avalonia.Threading;
 using Avalonia.Media.Imaging;
 using SkiaSharp;
-using NWaves.Filters.Bessel;
-using System.Numerics;
 
 namespace SignalGUI.ViewModels;
 
@@ -22,7 +13,6 @@ public partial class CompositeComponentViewModel
 {
     // Properties to hold 2D data
     private ndarray? _2DData;
-    private bool _is2DMode = false;
 
     // Property to hold the rendered 2D image
     private Bitmap? _renderedImage;
@@ -45,18 +35,19 @@ public partial class CompositeComponentViewModel
             Series.Add(
                 RenderUtils.Plot(
                     "Real",
-                    x.AsFloatArray(), 
+                    x.AsFloatArray(),
                     y.AsFloatArray(),
                     color: SKColors.Blue
                 )
             );
+
             if(_yImagValues is not null)
             {
                 var yImag = np.array(_yImagValues,copy:false).resample([SignalParameters.RenderPoints]);
                 Series.Add(
                     RenderUtils.Plot(
                         "Imag",
-                        x.AsFloatArray(), 
+                        x.AsFloatArray(),
                         yImag.AsFloatArray(),
                         color: SKColors.Orange
                     )

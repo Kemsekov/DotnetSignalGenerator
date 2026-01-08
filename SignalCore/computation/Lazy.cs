@@ -43,7 +43,7 @@ public class TrackedOperation<T>(Func<Action<int>,LazyOperationState, T> jobUnit
     /// </summary>
     public event Action<int> OnExecutedStep = a => { };
     public event Action<T> OnExecutionDone = (i) => {};
-    public event Action<AggregateException> OnException = (i) => {};
+    public event Action<Exception> OnException = (i) => {};
     /// <summary>
     /// Exceptions (if any) of running task
     /// </summary>
@@ -102,7 +102,7 @@ public class TrackedOperation<T>(Func<Action<int>,LazyOperationState, T> jobUnit
                 OnExecutionDone(res);
                 return res;
             }
-            catch(AggregateException e)
+            catch(Exception e)
             {
                 watch.Stop();
                 OnException(e);

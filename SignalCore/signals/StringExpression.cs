@@ -21,6 +21,7 @@ public class StringExpression
     public ndarray Call(params (string name, ndarray signal)[] parameters)
     {
         var _params = parameters.Select(v=>new Parameter(v.name,v.signal)).ToArray();
-        return (ndarray)interpreter.Eval(_expression,_params);
+        var res = (ndarray)interpreter.Eval(_expression,_params);
+        return res;
     }
 }

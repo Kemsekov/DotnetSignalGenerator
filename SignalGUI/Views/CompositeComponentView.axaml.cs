@@ -25,14 +25,6 @@ public partial class CompositeComponentView : UserControl
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
-        SetupDragAndDrop();
-    }
-
-    private void SetupDragAndDrop()
-    {
-        // For now, we'll implement a simpler approach by adding event handlers to the drag handles
-        // This requires a different approach since we can't easily attach events to items in the ListBox
-        // after they're created. Instead, we'll use a behavior-based approach.
     }
 
     // Event handler for when a drag handle is pressed

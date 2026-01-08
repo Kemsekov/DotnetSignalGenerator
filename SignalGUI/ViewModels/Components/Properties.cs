@@ -14,7 +14,6 @@ namespace SignalGUI.ViewModels;
 
 public partial class CompositeComponentViewModel : ViewModelBase
 {
-    TrackedOperation<ndarray>? _createdSignal;
     SignalStatisticViewModel[]? _signalStatistics;
 
     [ObservableProperty]
@@ -87,16 +86,4 @@ public partial class CompositeComponentViewModel : ViewModelBase
 
     [ObservableProperty]
     private ObservableCollection<ParameterViewModelWithCallback> _currentParameters = new();
-}
-
-public partial class SignalStatisticViewModel : ObservableObject
-{
-    public SignalStatisticViewModel(string name, float stat)
-    {
-        Name = name;
-        Stat = stat;
-    }
-
-    public string Name { get; set; }
-    public float Stat { get; set; }
 }

@@ -16,7 +16,6 @@ public class SignalParameters
             throw new ArgumentException("computePoints and renderPoints must be positive numbers!");
         ComputePoints = computePoints;
         RenderPoints=renderPoints;
-        
     }
 
     public static GuiObjectFactory CreateFactory()

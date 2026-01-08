@@ -25,64 +25,6 @@ public class InverseFFTTransform : ITransform
         return np.array(sig,copy:false);
     }
 }
-/// <summary>
-/// Short-Time Fourier transform. Returns data in shape [N,K], where each N is time frame, K is spectra frequency
-/// </summary>
-public class STFTTransform : ITransform
-{
-    private Stft _stft;
-
-    public STFTTransform(int fftSize = 16, int hopSize = 16)
-    {
-        Validate(fftSize, hopSize);
-        _stft = new(fftSize, hopSize);
-    }
-
-    public static void Validate(int fftSize, int hopSize)
-    {
-        if (fftSize < 1 || hopSize < 1)
-            throw new ArgumentException("fftSize and hopSize cannot be smaller than 1");
-    }
-
-    public ndarray Compute(ndarray signal)
-    {
-        var x = signal.AsFloatArray();
-        var spec = _stft.Direct(x);   // Complex[][]
-        var res = spec.Select(
-            v=>
-            v.Item1.Zip(v.Item2)
-            .Select(
-                pair=>
-                new Complex(pair.First,pair.Second)
-            ).ToArray()
-        ).ToArray();
-        return np.stack(res);
-    }
-}
-
-public class InverseSTFTTransform : ITransform
-{
-    public InverseSTFTTransform(int fftSize = 16, int hopSize = 16)
-    {
-        STFTTransform.Validate(fftSize,hopSize);
-        _stft = new(fftSize, hopSize);
-    }
-    private readonly Stft _stft;
-
-    public ndarray Compute(ndarray signal)
-    {
-        var spec = signal.Select(v =>
-        {
-            var c = v.ToNdarray();
-            return (c.Real.AsFloatArray(),c.Imag.AsFloatArray());
-        }).ToList();
-
-        var res = np.array(_stft.Inverse(spec), copy: false);
-        var nanMask = np.isnan(res);
-
-        return res.A(~nanMask);
-    }
-}
 
 /// <summary>
 /// Fast wavelet transform
