@@ -1,13 +1,42 @@
+//TODO: Add tests
+// 1. Check if computation works (all methods works as intended)
+// 2. Check if cancellation system works, so if we have multiple
+// tracked operations like T1->T2->T3, then stopping next one will stop all previous
+// 3. Check that all events like OnExecutedStep, OnCancel, OnException is called.
+// when operation throws exception
+// 3.1 Check that if exception on previous tracked events happened, it properly propagates to forward tracked ops as well,
+// so if we have chain T1->T2->T3, and T1 throws, then T1, T2 and T3 OnException is called
+// 4. Check that ElapsedMilliseconds time for operation is properly computed
+// for different cases: when we have chain T1->T2->T3, and some previous steps are
+// precomputed, when not precomputed. Check that time works as intended
+// 5. Check that ExecutedSteps,TotalSteps are updated properly with chained
+// lazy operations and accumulates.
 using System.Diagnostics;
-
 namespace SignalCore.Computation;
-//documentation is AI generated and verified by me =)
+
+public class LazyOperationState
+{
+    public event Action OnCancel = ()=>{};
+    public bool Canceled => _canceled;
+    bool _canceled = false;
+    public void Cancel()
+    {
+        if(_canceled) return;
+        _canceled = true;
+        OnCancel();
+    }
+    public void ThrowIfCanceled()
+    {
+        if (_canceled)
+            throw new OperationCanceledException("Tracked lazy operation was canceled");
+    }
+}
 
 /// <summary>
 /// Represents a computation that can be executed asynchronously with progress tracking.
 /// </summary>
 /// <typeparam name="T">The type of the result produced by the operation.</typeparam>
-public class TrackedOperation<T>(Func<Action<int>, T> jobUnit, int totalSteps, Func<int>? previousOperationExecutedSteps = null, int previousOperationTotalSteps = 0)
+public class TrackedOperation<T>(Func<Action<int>,LazyOperationState, T> jobUnit, int totalSteps, Func<int>? previousOperationExecutedSteps = null, int previousOperationTotalSteps = 0)
 {
     /// <summary>
     /// Event fired when a step in the operation is executed.
@@ -52,7 +81,8 @@ public class TrackedOperation<T>(Func<Action<int>, T> jobUnit, int totalSteps, F
     /// Gets whether the operation is currently running.
     /// </summary>
     public bool IsRunning => watch.IsRunning;
-    
+    public LazyOperationState CancelState {get;} = new();
+    public void Cancel()=>CancelState.Cancel();
     /// <summary>
     /// Starts the execution of the operation if it hasn't already been started.
     /// </summary>
@@ -67,13 +97,14 @@ public class TrackedOperation<T>(Func<Action<int>, T> jobUnit, int totalSteps, F
                 {
                     executedSteps[i] = 1;
                     OnExecutedStep(previousOperationTotalSteps + i);
-                });
+                },CancelState);
                 watch.Stop();
                 OnExecutionDone(res);
                 return res;
             }
             catch(AggregateException e)
             {
+                watch.Stop();
                 OnException(e);
                 throw;
             }
@@ -124,11 +155,12 @@ public static class LazyTrackedOperation
     public static TrackedOperation<T> Composition<T>(T input, params Func<T, T>[] transforms)
     {
         var totalOperations = transforms.Length;
-        T delayedTask(Action<int> onTaskCompleted)
+        T delayedTask(Action<int> onTaskCompleted,LazyOperationState op)
         {
             var data = input;
             for (int i = 0; i < transforms.Length; i++)
             {
+                op.ThrowIfCanceled();
                 data = transforms[i](data);
                 onTaskCompleted(i);
             }
@@ -147,11 +179,15 @@ public static class LazyTrackedOperation
     public static TrackedOperation<T> Composition<T>(this TrackedOperation<T> input, params Func<T, T>[] transforms)
     {
         var totalOperations = transforms.Length;
-        T delayedTask(Action<int> onTaskCompleted)
+        T delayedTask(Action<int> onTaskCompleted,LazyOperationState op)
         {
+            op.ThrowIfCanceled();
+            //this one can compute very long, so we check cancel task before
+            // getting previous track
             var data = input.Result;
             for (int i = 0; i < transforms.Length; i++)
             {
+                op.ThrowIfCanceled();
                 data = transforms[i](data);
                 onTaskCompleted(i);
             }
@@ -159,6 +195,9 @@ public static class LazyTrackedOperation
         }
         var res = new TrackedOperation<T>(delayedTask, totalOperations, () => input.ExecutedSteps, input.TotalSteps);
         input.OnExecutedStep += res.InvokeExecutionEvent;
+        
+        //if we cancel next, so we stop previous
+        res.CancelState.OnCancel+=input.Cancel;
         return res;
     }
     
@@ -171,15 +210,19 @@ public static class LazyTrackedOperation
     public static TrackedOperation<T[]> Factory<T>(params Func<T>[] get)
     {
         var totalOperations = get.Length;
-        T[] delayedTask(Action<int> onTaskCompleted)
+        T[] delayedTask(Action<int> onTaskCompleted,LazyOperationState op)
         {
+            op.ThrowIfCanceled();
             var res = new T[get.Length];
             var data = get.Select((factory, ind) => (factory, ind));
             Parallel.ForEach(data, v =>
             {
+                if(op.Canceled)
+                    return;
                 res[v.ind] = v.factory();
                 onTaskCompleted(v.ind);
             });
+            op.ThrowIfCanceled();
             return res;
         }
         return new TrackedOperation<T[]>(delayedTask, totalOperations);
@@ -193,14 +236,16 @@ public static class LazyTrackedOperation
     public static TrackedOperation<T[]> FactorySequential<T>(params Func<T>[] get)
     {
         var totalOperations = get.Length;
-        T[] delayedTask(Action<int> onTaskCompleted)
+        T[] delayedTask(Action<int> onTaskCompleted,LazyOperationState op)
         {
+            op.ThrowIfCanceled();
             var res = new T[get.Length];
             var data = get.Select((factory, ind) => (factory, ind));
-            foreach(var v in data)
+            foreach(var (factory, ind) in data)
             {
-                res[v.ind] = v.factory();
-                onTaskCompleted(v.ind);
+                op.ThrowIfCanceled();
+                res[ind] = factory();
+                onTaskCompleted(ind);
             };
             return res;
         }
@@ -215,11 +260,12 @@ public static class LazyTrackedOperation
     public static TrackedOperation<bool> ActionSequential(params Action[] todo)
     {
         var totalOperations = todo.Length;
-        bool delayedTask(Action<int> onTaskCompleted)
+        bool delayedTask(Action<int> onTaskCompleted,LazyOperationState op)
         {
             var data = todo.Select((action, ind) => (action, ind));
             foreach (var v in data)
             {
+                op.ThrowIfCanceled();
                 v.action();
                 onTaskCompleted(v.ind);
             }
@@ -236,14 +282,17 @@ public static class LazyTrackedOperation
     public static TrackedOperation<bool> Action(params Action[] todo)
     {
         var totalOperations = todo.Length;
-        bool delayedTask(Action<int> onTaskCompleted)
+        bool delayedTask(Action<int> onTaskCompleted,LazyOperationState op)
         {
+            op.ThrowIfCanceled();
             var data = todo.Select((action, ind) => (action, ind));
             Parallel.ForEach(data, v =>
             {
+                if(op.Canceled) return;
                 v.action();
                 onTaskCompleted(v.ind);
             });
+            op.ThrowIfCanceled();
             return true;
         }
         return new TrackedOperation<bool>(delayedTask, totalOperations);
@@ -259,14 +308,17 @@ public static class LazyTrackedOperation
     public static TrackedOperation<bool> Action<TArg>(TArg arg, params Action<TArg>[] todo)
     {
         var totalOperations = todo.Length;
-        bool delayedTask(Action<int> onTaskCompleted)
+        bool delayedTask(Action<int> onTaskCompleted,LazyOperationState op)
         {
+            op.ThrowIfCanceled();
             var data = todo.Select((action, ind) => (action, ind));
             Parallel.ForEach(data, v =>
             {
+                if(op.Canceled) return;
                 v.action(arg);
                 onTaskCompleted(v.ind);
             });
+            op.ThrowIfCanceled();
             return true;
         }
         return new TrackedOperation<bool>(delayedTask, totalOperations);
@@ -282,19 +334,25 @@ public static class LazyTrackedOperation
     public static TrackedOperation<bool> Action<TArg>(this TrackedOperation<TArg> arg, params Action<TArg>[] todo)
     {
         var totalOperations = todo.Length;
-        bool delayedTask(Action<int> onTaskCompleted)
+        bool delayedTask(Action<int> onTaskCompleted,LazyOperationState op)
         {
+            op.ThrowIfCanceled();
             var data = todo.Select((action, ind) => (action, ind));
             var argResult = arg.Result;
+            op.ThrowIfCanceled();
             Parallel.ForEach(data, v =>
             {
+                if(op.Canceled) return;
                 v.action(argResult);
                 onTaskCompleted(v.ind);
             });
+            op.ThrowIfCanceled();
             return true;
         }
         var res = new TrackedOperation<bool>(delayedTask, totalOperations);
         arg.OnExecutedStep += res.InvokeExecutionEvent;
+        //if we cancel next, so we stop previous
+        res.CancelState.OnCancel+=arg.Cancel;
         return res;
     }
 
@@ -309,15 +367,18 @@ public static class LazyTrackedOperation
     public static TrackedOperation<T[]> Transform<Arg, T>(Arg arg, Func<Arg, T>[] transform)
     {
         var totalOperations = transform.Length;
-        T[] delayedTask(Action<int> onTaskCompleted)
+        T[] delayedTask(Action<int> onTaskCompleted,LazyOperationState op)
         {
+            op.ThrowIfCanceled();
             var res = new T[transform.Length];
             var data = transform.Select((factory, ind) => (factory, ind));
             Parallel.ForEach(data, v =>
             {
+                if(op.Canceled) return;
                 res[v.ind] = v.factory(arg);
                 onTaskCompleted(v.ind);
             });
+            op.ThrowIfCanceled();
             return res;
         }
         return new TrackedOperation<T[]>(delayedTask, totalOperations);
@@ -334,14 +395,20 @@ public static class LazyTrackedOperation
     public static TrackedOperation<T> Transform<Arg, T>(this TrackedOperation<Arg> arg, Func<Arg, T> transform)
     {
         var totalOperations = 1;
-        T delayedTask(Action<int> onTaskCompleted)
+        T delayedTask(Action<int> onTaskCompleted,LazyOperationState op)
         {
-            var res = transform(arg.Result);
+            op.ThrowIfCanceled();
+            var prev = arg.Result; //because this one can be very long, it make
+            op.ThrowIfCanceled();  //sense to check twice if operation is canceled
+
+            var res = transform(prev);
             onTaskCompleted(0);
             return res;
         }
         var res = new TrackedOperation<T>(delayedTask, totalOperations, () => arg.ExecutedSteps, arg.TotalSteps);
         arg.OnExecutedStep += res.InvokeExecutionEvent;
+        //if we cancel next, so we stop previous
+        res.CancelState.OnCancel+=arg.Cancel;
         return res;
     }
 
@@ -356,20 +423,26 @@ public static class LazyTrackedOperation
     public static TrackedOperation<T[]> Transform<Arg, T>(this TrackedOperation<Arg> arg, Func<Arg, T>[] transform)
     {
         var totalOperations = transform.Length;
-        T[] delayedTask(Action<int> onTaskCompleted)
+        T[] delayedTask(Action<int> onTaskCompleted,LazyOperationState op)
         {
+            op.ThrowIfCanceled();
             var res = new T[transform.Length];
             var data = transform.Select((factory, ind) => (factory, ind));
             var input = arg.Result;
+            op.ThrowIfCanceled();
             Parallel.ForEach(data, v =>
             {
+                if(op.Canceled) return;
                 res[v.ind] = v.factory(input);
                 onTaskCompleted(v.ind);
             });
+            op.ThrowIfCanceled();
             return res;
         }
         var res = new TrackedOperation<T[]>(delayedTask, totalOperations, () => arg.ExecutedSteps, arg.TotalSteps);
         arg.OnExecutedStep += res.InvokeExecutionEvent;
+        //if we cancel next, so we stop previous
+        res.CancelState.OnCancel+=arg.Cancel;
         return res;
     }
 }
