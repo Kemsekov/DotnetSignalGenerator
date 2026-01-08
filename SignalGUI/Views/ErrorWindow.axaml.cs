@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
@@ -12,8 +13,8 @@ public partial class ErrorWindow : Window
     public ErrorWindow()
     {
         InitializeComponent();
-        _errorMessageTextBlock = this.FindControl<TextBlock>("ErrorMessageTextBlock");
-        _okButton = this.FindControl<Button>("OkButton");
+        _errorMessageTextBlock = this.FindControl<TextBlock>("ErrorMessageTextBlock") ?? throw new KeyNotFoundException("ErrorMessageTextBlock");
+        _okButton = this.FindControl<Button>("OkButton")  ?? throw new KeyNotFoundException("OkButton");
 
 #if DEBUG
         this.AttachDevTools();

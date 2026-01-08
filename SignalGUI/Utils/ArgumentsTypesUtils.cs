@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 
 namespace SignalGUI.Utils
@@ -22,19 +23,19 @@ namespace SignalGUI.Utils
         {
             if (type == typeof(int))
             {
-                return int.TryParse(stringValue, out int intResult) ? intResult : 0;
+                return int.TryParse(stringValue, out int intResult) ? intResult : stringValue;
             }
             else if (type == typeof(float))
             {
-                return float.TryParse(stringValue, out float floatResult) ? floatResult : 0.0f;
+                return float.TryParse(stringValue, out float floatResult) ? floatResult : stringValue;
             }
             else if (type == typeof(double))
             {
-                return double.TryParse(stringValue, out double doubleResult) ? doubleResult : 0.0;
+                return double.TryParse(stringValue, out double doubleResult) ? doubleResult : stringValue;
             }
             else if (type == typeof(long))
             {
-                return long.TryParse(stringValue, out long longResult) ? longResult : 0L;
+                return long.TryParse(stringValue, out long longResult) ? longResult : stringValue;
             }
             else if (type == typeof(string))
             {
@@ -70,5 +71,55 @@ namespace SignalGUI.Utils
         {
             return SupportedTypes.Any(v=>v==type);
         }
+
+    public static object? CastOrThrow(this object? v, Type t,Exception? e = null)
+    {
+        if (t is null) throw new ArgumentNullException(nameof(t));
+
+        // 1) Already the right runtime type (or null allowed for reference/nullable)
+        if (v is null)
+        {
+            if (!t.IsValueType || Nullable.GetUnderlyingType(t) != null) return null;
+            throw e ?? new InvalidCastException($"Cannot cast null to non-nullable value type {t.FullName}.");
+        }
+        if (t.IsInstanceOfType(v)) return v;
+
+        var vt = v.GetType();
+
+        // 2) “Cast” in the assignability sense (base class / interface)
+        // If this is true, the object is already compatible; the earlier IsInstanceOfType
+        // should have caught most cases, but keep it as a sanity check.
+        if (t.IsAssignableFrom(vt)) return v; // assignable means you can treat it as t [web:48]
+
+        // 3) Conversions
+        // Unwrap Nullable<T> target to T for conversion. [web:37][web:38]
+        var nonNullableTarget = Nullable.GetUnderlyingType(t) ?? t;
+
+        try
+        {
+            // Enums: allow "string name" or "numeric underlying value".
+            if (nonNullableTarget.IsEnum)
+            {
+                if (v is string s)
+                    return Enum.Parse(nonNullableTarget, s, ignoreCase: true);
+
+                var underlying = Enum.GetUnderlyingType(nonNullableTarget);
+                var numeric = Convert.ChangeType(v, underlying, CultureInfo.InvariantCulture); // [web:38]
+                return Enum.ToObject(nonNullableTarget, numeric!);
+            }
+
+            // General IConvertible conversions (numbers, DateTime, etc.). [web:38]
+            if (v is IConvertible)
+                return Convert.ChangeType(v, nonNullableTarget, CultureInfo.InvariantCulture);
+
+            // If you want: add a custom converter hook here (TypeConverter) for non-IConvertible types.
+        }
+        catch (Exception ex) when (ex is InvalidCastException || ex is FormatException || ex is OverflowException || ex is ArgumentException)
+        {
+            throw e ?? new  InvalidCastException($"Cannot cast/convert value of type {vt.FullName} to {t.FullName}.", ex);
+        }
+
+        throw e ?? new InvalidCastException($"Cannot cast/convert value of type {vt.FullName} to {t.FullName}.");
     }
+}
 }

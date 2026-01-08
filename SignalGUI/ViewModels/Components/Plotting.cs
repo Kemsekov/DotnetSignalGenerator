@@ -4,28 +4,21 @@ using CommunityToolkit.Mvvm.Input;
 using SignalCore;
 using NumpyDotNet;
 using LiveChartsCore.SkiaSharpView;
-using Avalonia.Media.Imaging;
 using SkiaSharp;
 
 namespace SignalGUI.ViewModels;
 
 public partial class CompositeComponentViewModel
 {
-    // Properties to hold 2D data
-    private ndarray? _2DData;
 
-    // Property to hold the rendered 2D image
-    private Bitmap? _renderedImage;
-    public Bitmap? RenderedImage
-    {
-        get => _renderedImage;
-        private set => SetProperty(ref _renderedImage, value);
-    }
 
     // Chart commands
     [RelayCommand]
     private void PlotLine()
     {
+        var _xValues = _computeSignal?.X;
+        var _yValues = _computeSignal?.Y;
+        var _yImagValues = _computeSignal?.YImag;
         if (_xValues != null && _yValues != null)
         {
             var x = np.array(_xValues,copy:false).resample([SignalParameters.RenderPoints]);
@@ -63,6 +56,9 @@ public partial class CompositeComponentViewModel
     [RelayCommand]
     private void PlotScatter()
     {
+        var _xValues = _computeSignal?.X;
+        var _yValues = _computeSignal?.Y;
+        var _yImagValues = _computeSignal?.YImag;
         if (_xValues != null && _yValues != null)
         {
             var x = np.array(_xValues,copy:false).resample([SignalParameters.RenderPoints]);
@@ -105,6 +101,7 @@ public partial class CompositeComponentViewModel
     [RelayCommand]
     private void Plot2DImage()
     {
+        var _2DData = _computeSignal?.ImageData;
         if (_2DData != null)
         {
             var renderPoints = SignalParameters.RenderPoints;
@@ -147,6 +144,7 @@ public partial class CompositeComponentViewModel
     [RelayCommand]
     private void Plot2DComplexImage()
     {
+        var _2DData = _computeSignal?.ImageData;
         if (_2DData != null && _2DData.Dtype == np.Complex)
         {
             var skImage = RenderUtils.RenderComplexArrayAsImage(_2DData, 800, 600);

@@ -12,11 +12,23 @@ using SignalGUI.Utils;
 
 namespace SignalGUI.ViewModels;
 
+/// <summary>
+/// Class that implements non-blocking signal's computation logic
+/// </summary>
 public class ComputeSignal
 {
-    public TrackedOperation<ndarray> combineSources{get;}
-    public TrackedOperation<ndarray> createdSignal {get;}
-    public TrackedOperation<(float stat, string name)[]> signalStatistics {get;}
+    TrackedOperation<ndarray> combineSources;
+    TrackedOperation<ndarray> createdSignal;
+    TrackedOperation<(float stat, string name)[]> signalStatistics {get;}
+
+    // Properties to hold 1d signal data
+    public float[]? X{get;protected set;}
+    public float[]? Y{get;protected set;}
+    public float[]? YImag{get;protected set;}
+    // Properties to hold 2D data (like Wavelet(FWT) transform)
+    public ndarray? ImageData{get;protected set;}
+    // Signal statistics like mean, std, skew, amplitude, etc
+    public SignalStatisticViewModel[]? Stats{get;protected set;}
     public ComputeSignal(
         int computePoints,
         IEnumerable<(string letter, ISignalGenerator instance)> generators,
@@ -77,18 +89,60 @@ public class ComputeSignal
                 )
             ).ToArray()
         );
+
+        signalStatistics.OnExecutionDone += statsRaw =>
+        {
+            Stats = statsRaw.Select(item => new SignalStatisticViewModel(item.name, item.stat)).ToArray();
+            // Need to dispatch to UI thread since this event is called from background thread
+
+
+            var res = createdSignal.Result;
+            var genOut = combineSources?.Result;
+            System.Console.WriteLine("====================");
+            System.Console.WriteLine($"Time {genOut?.shape}");
+            System.Console.WriteLine($"Signal {res.shape}");
+            System.Console.WriteLine($"Signal dtype {res.Dtype}");
+            // if we got single signal output of shape [1,N] or [N]
+            if (res.shape[0] == 1 && res.shape.iDims.Length == 2 || res.shape.iDims.Length == 1)
+            {
+                // if we have complex outputs like FFT, keep separate real
+                // and imag part of signal
+                if (res.Dtype == np.Complex)
+                    YImag = res.Imag?.AsFloatArray();
+                else
+                    YImag = null;
+
+                // here X is signal time, Y is signal value
+
+                // Store the X and Y values for plotting
+                X = genOut?.at(0)?.AsFloatArray();
+                Y = res.Real?.AsFloatArray();
+            }
+
+            // if we have 2d array, then render it as image
+            if(res.shape[0]>1 && res.shape.iDims.Length == 2)
+            {
+                ImageData = res;
+            }
+            OnExecutionDone.Invoke();
+        };
+        signalStatistics.OnExecutedStep+=OnExecutedStep.Invoke;
+        signalStatistics.CancelState.OnCancel+=OnCancel.Invoke;
+        signalStatistics.OnException+=OnException.Invoke;
     }
+    public float PercentCompleted => signalStatistics.PercentCompleted;
+    public Action OnCancel = ()=>{};
+    public event Action<Exception> OnException = e=>{};
+    public event Action<int> OnExecutedStep = i=>{};
+    public event Action OnExecutionDone = ()=>{};
     //Run the latest chain element
     public void Run() => signalStatistics.Run();
     // Cancel computation
     public void Cancel()=>signalStatistics.Cancel();
 }
 
-
 public partial class CompositeComponentViewModel
 {
-    ComputeSignal? _computeSignal;
-
     [RelayCommand]
     private void ComputeSignal()
     {
@@ -100,7 +154,7 @@ public partial class CompositeComponentViewModel
 
         IEnumerable<(string letter, ISignalGenerator instance)>? generators;
         IEnumerable<ISignalOperation>? ops;
-        SignalParameters s;
+        SignalParameters? s;
         var expr=new StringExpression(Expression);
         var parse = ParseComputeArguments(out s,out generators, out ops);
         if(parse is Exception e)
@@ -123,73 +177,35 @@ public partial class CompositeComponentViewModel
         );
 
         // Subscribe to the OnExecutedStep event to update completion percentage
-        computeSignal.signalStatistics.OnExecutedStep += (_) =>
+        computeSignal.OnExecutedStep += (_) =>
         {
-            var completed = computeSignal.createdSignal.PercentCompleted;
+            var completed = computeSignal.PercentCompleted;
             // Update the CompletedPercent property by multiplying PercentCompleted by 100 and rounding to int
             var percent = (int)Math.Round(completed * 100);
             CompletedPercent = percent;
         };
 
-        computeSignal.signalStatistics.CancelState.OnCancel+=()=>{
+        computeSignal.OnCancel+=()=>{
             CompletedPercent = -1;
         };
 
         // if something broke when computing show error
-        computeSignal.signalStatistics.OnException += e =>
+        computeSignal.OnException += e =>
         {
             Dispatcher.UIThread.Post(()=>ErrorHandlingUtils.ShowErrorWindow(e));
         };
 
-        // This event called once computation is completed
-        computeSignal.createdSignal.OnExecutionDone += res =>
+        computeSignal.OnExecutionDone += () =>
         {
-            RenderedImage=null;
-            _xValues=null;
-            _yValues=null;
-            _yImagValues=null;
-
-            var genOut = computeSignal.combineSources?.Result;
-            System.Console.WriteLine("====================");
-            System.Console.WriteLine($"Time {genOut?.shape}");
-            System.Console.WriteLine($"Signal {res.shape}");
-            System.Console.WriteLine($"Signal dtype {res.Dtype}");
-            // if we got single signal output of shape [1,N] or [N]
-            if (res.shape[0] == 1 && res.shape.iDims.Length == 2 || res.shape.iDims.Length == 1)
-            {
-                if (res.Dtype == np.Complex)
-                    _yImagValues = res.Imag?.AsFloatArray();
-                else
-                    _yImagValues = null;
-
-                // here X is signal time, Y is signal value
-
-                // Store the X and Y values for plotting
-                _xValues = genOut?.at(0)?.AsFloatArray();
-                _yValues = res.Real?.AsFloatArray();
-                // Automatically plot as a line chart after computation is done
-                // Need to dispatch to UI thread since this event is called from background thread
-                Dispatcher.UIThread.Post(PlotLine);
-            }
-
-            // if we have 2d array, then render it as image
-            if(res.shape[0]>1 && res.shape.iDims.Length == 2)
-            {
-                _2DData = res;
-                Dispatcher.UIThread.Post(Plot2DImage);
-            }
-        };
-
-        computeSignal.signalStatistics.OnExecutionDone += res =>
-        {
-            // res of type (float stat, string name)[]
-
-            var stats = res.Select(item => new SignalStatisticViewModel(item.name, item.stat)).ToArray();
-            // Need to dispatch to UI thread since this event is called from background thread
+            // Update signal statistics
             Dispatcher.UIThread.Post(() =>
             {
-                SignalStatistics = stats;
+                SignalStatistics = computeSignal.Stats;
             });
+            // Automatically plot as a line chart after computation is done
+            // Need to dispatch to UI thread since this event is called from background thread
+            Dispatcher.UIThread.Post(PlotLine);
+            Dispatcher.UIThread.Post(Plot2DImage);
         };
 
         computeSignal.Run();

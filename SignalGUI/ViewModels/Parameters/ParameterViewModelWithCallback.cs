@@ -1,4 +1,5 @@
 using System;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using SignalGUI.Utils;
 
@@ -9,11 +10,8 @@ public partial class ParameterViewModelWithCallback : ObservableObject
     public string Name { get; set; }
     public Type Type { get; set; }
     public object Value { get; set; }
-
     private Action<object> _updateCallback;
-
     private string _stringValue = "";
-
     public string StringValue
     {
         get => _stringValue;
@@ -40,14 +38,13 @@ public partial class ParameterViewModelWithCallback : ObservableObject
         try
         {
             Value = ArgumentsTypesUtils.ParseValue(Type, StringValue);
-
             // Call the callback to update the factory's InstanceArguments
             _updateCallback?.Invoke(Value);
         }
-        catch
+        catch(Exception e)
         {
-            // If parsing fails, keep the original value
-            StringValue = Value?.ToString() ?? "";
+            // If parsing fails, show error
+            Dispatcher.UIThread.Post(()=>ErrorHandlingUtils.ShowErrorWindow(e));
         }
     }
 }

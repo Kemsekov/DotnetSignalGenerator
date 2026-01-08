@@ -9,7 +9,6 @@ public partial class SignalStatisticViewModel : ObservableObject
         Name = name;
         Stat = stat;
     }
-
     public string Name { get; set; }
     public float Stat { get; set; }
 }

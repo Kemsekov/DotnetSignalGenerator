@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using SignalCore.Storage;
 using SignalGUI.Utils;
 
@@ -11,9 +12,7 @@ public class GuiObjectFactory : ICloneable
     private string _objectName;
     public Type ObjType { get; set; }
     public IDictionary<string, Type> Arguments { get; set; } = new Dictionary<string,Type>();
-
     private IDictionary<string, (Type type, object? defaultValue)> _ctor_arguments;
-
     public IDictionary<string, object> InstanceArguments { get; set; } = new Dictionary<string,object>();
     public string Name => _objectName;
     public GuiObjectFactory(Type objType, IDictionary<string, (Type type, object? defaultValue)> arguments,string? objectName = null)
@@ -33,16 +32,27 @@ public class GuiObjectFactory : ICloneable
         }
         _objectName = objectName ?? objType.Name;
     }
-
-    public override string ToString()
-    {
-        return _objectName;
-    }
+    public override string ToString() => _objectName;
     public object GetInstance()
-        => new ObjectFactory(
+    {
+        ValidateInstanceArgumentsType();
+        return new ObjectFactory(
                 ObjType ?? throw new ArgumentException("Cannot get type"),
                 InstanceArguments
             ).CreateInstance();
+    }
+
+    public void ValidateInstanceArgumentsType()
+    {
+        foreach(var key in InstanceArguments.Keys)
+        {
+            var value = InstanceArguments[key];
+            var type = Arguments[key];
+            InstanceArguments[key]=value.CastOrThrow(
+                type, new ArgumentException($"Cannot use \"{value}\" as value for field \"{key}\"")
+            ) ?? throw new ArgumentException($"Parameter {key} cannot be null!");
+        }
+    }
 
     public GuiObjectFactory Clone()
     {

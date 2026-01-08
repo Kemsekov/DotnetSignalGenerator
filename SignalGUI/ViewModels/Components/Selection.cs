@@ -1,4 +1,6 @@
+using System;
 using CommunityToolkit.Mvvm.Input;
+using SignalGUI.Utils;
 
 namespace SignalGUI.ViewModels;
 
@@ -31,7 +33,6 @@ public partial class CompositeComponentViewModel
     private void UpdateCurrentParameters()
     {
         CurrentParameters.Clear();
-
         if (SelectedSource?.Factory != null)
         {
             foreach (var param in SelectedSource.Factory.Arguments)
@@ -54,6 +55,7 @@ public partial class CompositeComponentViewModel
                 CurrentParameters.Add(paramVM);
             }
         }
+
     }
 
     private void UpdateCurrentParametersForSignalParams()
