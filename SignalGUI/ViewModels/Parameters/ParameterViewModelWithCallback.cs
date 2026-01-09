@@ -10,8 +10,8 @@ public partial class ParameterViewModelWithCallback : ObservableObject
     public string Name { get; set; }
     public Type Type { get; set; }
     public object Value { get; set; }
-    private Action<object> _updateCallback;
-    private string _stringValue = "";
+    Action<object> _updateCallback;
+    string _stringValue = "";
     public string StringValue
     {
         get => _stringValue;

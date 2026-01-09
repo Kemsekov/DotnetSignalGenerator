@@ -12,7 +12,7 @@ public partial class CompositeComponentViewModel
 {
     // Chart commands
     [RelayCommand]
-    private void PlotLine()
+    void PlotLine()
     {
         var _xValues = _computeSignal?.X;
         var _yValues = _computeSignal?.Y;
@@ -52,7 +52,7 @@ public partial class CompositeComponentViewModel
     }
 
     [RelayCommand]
-    private void PlotScatter()
+    void PlotScatter()
     {
         var _xValues = _computeSignal?.X;
         var _yValues = _computeSignal?.Y;
@@ -91,14 +91,14 @@ public partial class CompositeComponentViewModel
     }
 
     [RelayCommand]
-    private void ClearPlot()
+    void ClearPlot()
     {
         Series.Clear();
         RenderedImage=null;
     }
 
     [RelayCommand]
-    private void Plot2DImage()
+    void Plot2DImage()
     {
         var _2DData = _computeSignal?.ImageData;
         if (_2DData != null)
@@ -132,7 +132,7 @@ public partial class CompositeComponentViewModel
 
 
     [RelayCommand]
-    private void ToggleFilterEnabled(FilterItemViewModel filter)
+    void ToggleFilterEnabled(FilterItemViewModel filter)
     {
         if (filter != null)
         {
@@ -141,7 +141,7 @@ public partial class CompositeComponentViewModel
     }
 
     [RelayCommand]
-    private void Plot2DComplexImage()
+    void Plot2DComplexImage()
     {
         var _2DData = _computeSignal?.ImageData;
         if (_2DData != null && _2DData.Dtype == np.Complex)

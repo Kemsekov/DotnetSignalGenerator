@@ -22,7 +22,7 @@ public partial class CompositeComponentViewModel
     }
 
     [RelayCommand]
-    private void RemoveSource(SourceItemViewModel source)
+    void RemoveSource(SourceItemViewModel source)
     {
         Sources.Remove(source);
         ReassignSourceLetters();
@@ -43,13 +43,13 @@ public partial class CompositeComponentViewModel
     }
 
     [RelayCommand]
-    private void RemoveFilter(FilterItemViewModel filter)
+    void RemoveFilter(FilterItemViewModel filter)
     {
         Filters.Remove(filter);
     }
 
     [RelayCommand]
-    private void MoveFilterUp(FilterItemViewModel filter)
+    void MoveFilterUp(FilterItemViewModel filter)
     {
         int index = Filters.IndexOf(filter);
         if (index > 0)
@@ -59,7 +59,7 @@ public partial class CompositeComponentViewModel
     }
 
     [RelayCommand]
-    private void MoveFilterDown(FilterItemViewModel filter)
+    void MoveFilterDown(FilterItemViewModel filter)
     {
         int index = Filters.IndexOf(filter);
         if (index < Filters.Count - 1)
@@ -81,14 +81,14 @@ public partial class CompositeComponentViewModel
         }
     }
 
-    private string GetNextLetter()
+    string GetNextLetter()
     {
         char letter = (char)('A' + _nextSourceLetterIndex);
         _nextSourceLetterIndex++;
         return letter.ToString();
     }
 
-    private void ReassignSourceLetters()
+    void ReassignSourceLetters()
     {
         _nextSourceLetterIndex = 0;
         foreach (var source in Sources)

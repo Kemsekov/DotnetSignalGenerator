@@ -3,9 +3,9 @@ using System.Runtime.CompilerServices;
 public unsafe static class GCInspector
 {
     // Offset is consistent across all primitive array types (int[], float[], etc.)
-    private static readonly int ReliableOffset = GetOffset();
+    static readonly int ReliableOffset = GetOffset();
 
-    private static int GetOffset()
+    static int GetOffset()
     {
         int[] dummy = new int[1];
         // Distance between where the managed 'ref' points and where the 'data' starts

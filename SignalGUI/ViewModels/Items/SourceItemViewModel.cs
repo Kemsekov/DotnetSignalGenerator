@@ -5,10 +5,10 @@ namespace SignalGUI.ViewModels;
 public partial class SourceItemViewModel : ViewModelBase
 {
     [ObservableProperty]
-    private string _letter = "";
+    string _letter = "";
 
     [ObservableProperty]
-    private GuiObjectFactory? _factory;
+    GuiObjectFactory? _factory;
 
     public string Configuration => $"{Factory?.Name}";
 }

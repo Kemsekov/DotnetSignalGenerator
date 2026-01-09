@@ -41,8 +41,6 @@ public partial class GuiSignalInstance : ObservableObject
 }
 public partial class CompositeComponentViewModel : ViewModelBase
 {
-   
-    // --------------------
     /// <summary>
     /// Method to get snapshot of current GUI
     /// </summary>
@@ -157,31 +155,20 @@ public partial class CompositeComponentViewModel : ViewModelBase
         YAxes = [.. instance.YAxes];
     }
 
-   
     public ICommand? ShowSavedSignalsCommand { get; set; }
     public ICommand? LoadSpecificGuiInstanceCommand { get; set; }
     public ICommand? RemoveGuiInstanceCommand { get; set; }
-
-    // Initialize the commands in the constructor
-    public CompositeComponentViewModel()
-    {
-        SaveGuiInstanceCommand = new RelayCommand(SaveCurrentGuiInstance);
-        LoadGuiInstanceCommand = new RelayCommand(LoadSelectedGuiInstance);
-        ShowSavedSignalsCommand = new RelayCommand(ShowSavedSignals);
-        LoadSpecificGuiInstanceCommand = new RelayCommand<GuiSignalInstance>(LoadSpecificGuiInstance);
-        RemoveGuiInstanceCommand = new RelayCommand<GuiSignalInstance>(RemoveGuiInstance);
-    }
-
     public Action? ShowSavedSignalsAction { get; set; }
     public Action? CloseSavedSignalsWindowAction { get; set; }
 
-    private void ShowSavedSignals()
+
+    void ShowSavedSignals()
     {
         System.Console.WriteLine($"ShowSavedSignals called. SavedGuiInstances count: {SavedGuiInstances.Count}");
         ShowSavedSignalsAction?.Invoke();
     }
 
-    private void LoadSpecificGuiInstance(GuiSignalInstance instance)
+    void LoadSpecificGuiInstance(GuiSignalInstance? instance)
     {
         System.Console.WriteLine($"LoadSpecificGuiInstance called with instance: {(instance?.ObjectName ?? "null")}");
         if (instance != null)
@@ -191,7 +178,7 @@ public partial class CompositeComponentViewModel : ViewModelBase
         }
     }
 
-    private void RemoveGuiInstance(GuiSignalInstance instance)
+    void RemoveGuiInstance(GuiSignalInstance? instance)
     {
         System.Console.WriteLine($"RemoveGuiInstance called with instance: {(instance?.ObjectName ?? "null")}");
         if (instance != null)
@@ -202,7 +189,7 @@ public partial class CompositeComponentViewModel : ViewModelBase
         }
     }
 
-    private void SaveCurrentGuiInstance()
+    void SaveCurrentGuiInstance()
     {
         try
         {
@@ -221,11 +208,20 @@ public partial class CompositeComponentViewModel : ViewModelBase
         }
     }
 
-    private void LoadSelectedGuiInstance()
+    void LoadSelectedGuiInstance()
     {
         if (SelectedGuiInstance != null)
         {
             LoadGuiInstance(SelectedGuiInstance);
         }
+    }
+    // Initialize the commands in the constructor
+    public CompositeComponentViewModel()
+    {
+        SaveGuiInstanceCommand = new RelayCommand(SaveCurrentGuiInstance);
+        LoadGuiInstanceCommand = new RelayCommand(LoadSelectedGuiInstance);
+        ShowSavedSignalsCommand = new RelayCommand(ShowSavedSignals);
+        LoadSpecificGuiInstanceCommand = new RelayCommand<GuiSignalInstance>(LoadSpecificGuiInstance);
+        RemoveGuiInstanceCommand = new RelayCommand<GuiSignalInstance>(RemoveGuiInstance);
     }
 }

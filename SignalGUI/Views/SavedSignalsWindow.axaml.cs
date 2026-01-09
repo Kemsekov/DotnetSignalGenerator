@@ -9,7 +9,7 @@ namespace SignalGUI.Views;
 
 public partial class SavedSignalsWindow : Window
 {
-    private CompositeComponentViewModel? _viewModel;
+    CompositeComponentViewModel? _viewModel;
 
     public SavedSignalsWindow()
     {
@@ -36,12 +36,12 @@ public partial class SavedSignalsWindow : Window
         }
     }
 
-    private void InitializeComponent()
+    void InitializeComponent()
     {
         AvaloniaXamlLoader.Load(this);
     }
 
-    private void CloseButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    void CloseButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         Close();
     }

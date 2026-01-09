@@ -40,64 +40,60 @@ public partial class CompositeComponentViewModel : ViewModelBase
         = _GetImplementationFactories(typeof(IFilter),typeof(INormalization),typeof(ITransform));
 
     [ObservableProperty]
-    private SourceItemViewModel? _selectedSource;
+    SourceItemViewModel? _selectedSource;
 
     [ObservableProperty]
-    private FilterItemViewModel? _selectedFilter;
+    FilterItemViewModel? _selectedFilter;
     [ObservableProperty]
-    private ObservableCollection<ParameterViewModelWithCallback> _currentParameters = new();
-
-    
+    ObservableCollection<ParameterViewModelWithCallback> _currentParameters = new();
 
     ComputeSignal? _computeSignal;
     [ObservableProperty]
     SignalStatisticViewModel[]? _signalStatistics;
 
     [ObservableProperty]
-    private string _objectName = "NewObject";
+    string _objectName = "NewObject";
 
     [ObservableProperty]
-    private int _completedPercent = 0;
+    int _completedPercent = 0;
 
     [ObservableProperty]
-    private string _expression = "";
-    private int _nextSourceLetterIndex = 0;
+    string _expression = "";
+    int _nextSourceLetterIndex = 0;
     public ObservableCollection<SourceItemViewModel> Sources { get; set; } = new();
     public ObservableCollection<FilterItemViewModel> Filters { get; set; } = new();
     public List<string> AvailableSourcesForExpression => Sources.Select(s => s.Letter).ToList();
     [ObservableProperty]
-    private GuiObjectFactory? _signalParams = SignalParameters.CreateFactory();
+    GuiObjectFactory? _signalParams = SignalParameters.CreateFactory();
 
     public SignalParameters SignalParameters => SignalParams?.GetInstance() as SignalParameters ?? 
                 throw new ArgumentException("Failed to cast SignalParameters");
     // Chart properties
     [ObservableProperty]
-    private ObservableCollection<ISeries> _series = new();
+    ObservableCollection<ISeries> _series = new();
 
     [ObservableProperty]
-    private List<Axis> _xAxes = new() { new Axis { Name = "Time" } };
+    List<Axis> _xAxes = new() { new Axis { Name = "Time" } };
 
     [ObservableProperty]
-    private List<Axis> _yAxes = new() { new Axis { Name = "Amplitude" } };
+    List<Axis> _yAxes = new() { new Axis { Name = "Amplitude" } };
     
     // Property to hold the rendered 2D image
     [ObservableProperty]
-    private Bitmap? _renderedImage;
+    Bitmap? _renderedImage;
 
     // Collection to store saved GUI instances
     public ObservableCollection<GuiSignalInstance> SavedGuiInstances { get; set; } = new();
     
     // Command to save the current GUI instance
     [ObservableProperty]
-    private ICommand? _saveGuiInstanceCommand;
+    ICommand? _saveGuiInstanceCommand;
 
     // Command to load a selected GUI instance
     [ObservableProperty]
-    private ICommand? _loadGuiInstanceCommand;
+    ICommand? _loadGuiInstanceCommand;
 
     // Property to track the selected GUI instance from the dropdown
     [ObservableProperty]
-    private GuiSignalInstance? _selectedGuiInstance;
-
-
+    GuiSignalInstance? _selectedGuiInstance;
 }

@@ -48,9 +48,9 @@ public class TrackedOperation<T>(Func<Action<int>,LazyOperationState, T> jobUnit
     /// Exceptions (if any) of running task
     /// </summary>
     public AggregateException? Exception => _running?.Exception;
-    private Stopwatch watch = new();
-    private Task<T>? _running = null;
-    private int[] executedSteps = new int[totalSteps];
+    Stopwatch watch = new();
+    Task<T>? _running = null;
+    int[] executedSteps = new int[totalSteps];
     
     /// <summary>
     /// Gets the number of steps that have been executed, including previous operations.

@@ -13,8 +13,8 @@ namespace SignalGUI.Views;
 
 public partial class CompositeComponentView : UserControl
 {
-    private int _dragStartIndex = -1;
-    private Point _startDragPoint;
+    int _dragStartIndex = -1;
+    Point _startDragPoint;
 
     public CompositeComponentView()
     {
@@ -23,7 +23,7 @@ public partial class CompositeComponentView : UserControl
         this.Loaded += OnLoaded;
     }
 
-    private void OnLoaded(object? sender, RoutedEventArgs e)
+    void OnLoaded(object? sender, RoutedEventArgs e)
     {
         if (DataContext is CompositeComponentViewModel viewModel)
         {
@@ -63,7 +63,7 @@ public partial class CompositeComponentView : UserControl
         }
     }
 
-    private void OnFilterPointerMoved(object? sender, PointerEventArgs e)
+    void OnFilterPointerMoved(object? sender, PointerEventArgs e)
     {
         if (_dragStartIndex >= 0)
         {
@@ -94,7 +94,7 @@ public partial class CompositeComponentView : UserControl
         }
     }
 
-    private void OnFilterPointerReleased(object? sender, PointerReleasedEventArgs e)
+    void OnFilterPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         // Remove event handlers
         this.PointerMoved -= OnFilterPointerMoved;
@@ -104,7 +104,7 @@ public partial class CompositeComponentView : UserControl
         _dragStartIndex = -1;
     }
 
-    private int GetFilterDropIndex(ListBox listBox, Point point)
+    int GetFilterDropIndex(ListBox listBox, Point point)
     {
         // Get all ListBoxItem containers
         var listBoxItems = new List<Control>();
@@ -174,7 +174,7 @@ public partial class CompositeComponentView : UserControl
         }
     }
 
-    private void OnSourceSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    void OnSourceSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (sender is ComboBox comboBox &&
             DataContext is CompositeComponentViewModel viewModel)
@@ -188,7 +188,7 @@ public partial class CompositeComponentView : UserControl
         }
     }
 
-    private void OnFilterSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    void OnFilterSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (sender is ComboBox comboBox &&
             DataContext is CompositeComponentViewModel viewModel)
@@ -202,7 +202,7 @@ public partial class CompositeComponentView : UserControl
         }
     }
 
-    private void OnSavedInstanceSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    void OnSavedInstanceSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (sender is ComboBox comboBox &&
             DataContext is CompositeComponentViewModel viewModel)

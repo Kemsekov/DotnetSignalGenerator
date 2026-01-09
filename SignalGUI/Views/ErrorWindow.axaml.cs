@@ -7,8 +7,8 @@ namespace SignalGUI.Views;
 
 public partial class ErrorWindow : Window
 {
-    private TextBlock _errorMessageTextBlock;
-    private Button _okButton;
+    TextBlock _errorMessageTextBlock;
+    Button _okButton;
 
     public ErrorWindow()
     {
@@ -27,7 +27,7 @@ public partial class ErrorWindow : Window
         _okButton.Click += (sender, e) => Close();
     }
 
-    private void InitializeComponent()
+    void InitializeComponent()
     {
         AvaloniaXamlLoader.Load(this);
     }

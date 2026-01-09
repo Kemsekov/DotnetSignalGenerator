@@ -2,7 +2,7 @@ using System.Text.Json;
 
 public static class DebugExtensions
 {
-    private static readonly JsonSerializerOptions _options = new() { WriteIndented = true };
+    static readonly JsonSerializerOptions _options = new() { WriteIndented = true };
 
     public static void Dump(this object obj)
     {

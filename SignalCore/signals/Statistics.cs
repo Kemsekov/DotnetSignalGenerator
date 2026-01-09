@@ -50,7 +50,7 @@ public class RootMeanSquareStatistic : ISignalStatistic
 
 public class PeakToPeakAmplitude : ISignalStatistic
 {
-    public string Name => "Peak2Peak Amp";
+    public string Name => "Amplitude";
 
     public ndarray Compute(ndarray signal)
     {

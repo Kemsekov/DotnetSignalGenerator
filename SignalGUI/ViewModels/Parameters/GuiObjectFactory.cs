@@ -9,10 +9,10 @@ namespace SignalGUI.ViewModels;
 
 public class GuiObjectFactory : ICloneable
 {
-    private string _objectName;
+    string _objectName;
     public Type ObjType { get; set; }
     public IDictionary<string, Type> Arguments { get; set; } = new Dictionary<string,Type>();
-    private IDictionary<string, (Type type, object? defaultValue)> _ctor_arguments;
+    IDictionary<string, (Type type, object? defaultValue)> _ctor_arguments;
     public IDictionary<string, object> InstanceArguments { get; set; } = new Dictionary<string,object>();
     public string Name => _objectName;
     public GuiObjectFactory(Type objType, IDictionary<string, (Type type, object? defaultValue)> arguments,string? objectName = null)

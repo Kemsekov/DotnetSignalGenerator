@@ -31,8 +31,8 @@ public class InverseFFTTransform : ITransform
 /// </summary>
 public class FWTTransform : ITransform
 {
-    private string waveletName;
-    private int levels;
+    string waveletName;
+    int levels;
 
     public FWTTransform(string waveletName = "haar", int levels = 3)
     {
@@ -76,8 +76,8 @@ public class FWTTransform : ITransform
 /// </summary>
 public class InverseFWTTransform : ITransform
 {
-    private string waveletName;
-    private int levels;
+    string waveletName;
+    int levels;
     public InverseFWTTransform(string waveletName = "haar", int levels = 3)
     {
         FWTTransform.Validate(waveletName,levels);

@@ -8,8 +8,8 @@ namespace SignalCore;
 /// </summary>
 public class StringExpression
 {
-    private string _expression;
-    private Interpreter interpreter;
+    string _expression;
+    Interpreter interpreter;
     public StringExpression(string expression)
     {
         _expression=expression;

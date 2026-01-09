@@ -22,8 +22,6 @@ var invFftT = new InverseFFTTransform().Compute;
 var wt = new FWTTransform().Compute;
 var iwt = new InverseFWTTransform().Compute;
 
-var stftT = new STFTTransform(256,256).Compute;
-var inverseStftT = new InverseSTFTTransform(256,256).Compute;
 
 var signal = LazyTrackedOperation.Factory(
     ()=>s1.Sample(points),
@@ -43,12 +41,11 @@ var filterY_ = signal
 .Composition(lowpass,highpass,cutOutlier,lowpassSmaller,normalization);
 
 var transformations = filterY_
-.Transform([fftT,stftT,wt]);
+.Transform([fftT,wt]);
 
 var invTransformations = transformations
 .Transform([
     t=>invFftT(t[0]),
-    t=>inverseStftT(t[1]),
     t=>iwt(t[2]),
 ]);
 

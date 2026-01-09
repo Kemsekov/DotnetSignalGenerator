@@ -27,9 +27,9 @@ public static class Filters
 
 public class AddNormalNoiseFilter : IFilter
 {
-    private readonly float _mean;
-    private readonly float _std;
-    private readonly np.random _rand;
+    readonly float _mean;
+    readonly float _std;
+    readonly np.random _rand;
 
     public AddNormalNoiseFilter(float mean = 0, float std = 1, int seed = 0)
     {
@@ -62,7 +62,7 @@ public class AddNormalNoiseFilter : IFilter
 
 public class LowPassFilterMethod : IFilterMethod
 {
-    private readonly float _alpha;
+    readonly float _alpha;
 
     public LowPassFilterMethod(float alpha = 0.9f)
     {
@@ -77,7 +77,7 @@ public class LowPassFilterMethod : IFilterMethod
 
 public class HighPassFilterMethod : IFilterMethod
 {
-    private readonly float _alpha;
+    readonly float _alpha;
 
     public HighPassFilterMethod(float alpha = 0.9f)
     {
@@ -195,8 +195,8 @@ public class ZeroPhaseFilter : IFilter
 
 public class CutOutliersFilter : IFilter
 {
-    private readonly float _lowQuantile;
-    private readonly float _highQuantile;
+    readonly float _lowQuantile;
+    readonly float _highQuantile;
 
     public CutOutliersFilter(float lowQuantile = 0.05f, float highQuantile = 0.95f)
     {

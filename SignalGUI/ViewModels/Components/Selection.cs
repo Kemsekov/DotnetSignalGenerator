@@ -30,7 +30,7 @@ public partial class CompositeComponentViewModel
         UpdateCurrentParametersForSignalParams();
     }
 
-    private void UpdateCurrentParameters()
+    void UpdateCurrentParameters()
     {
         CurrentParameters.Clear();
         if (SelectedSource?.Factory != null)
@@ -58,7 +58,7 @@ public partial class CompositeComponentViewModel
 
     }
 
-    private void UpdateCurrentParametersForSignalParams()
+    void UpdateCurrentParametersForSignalParams()
     {
         CurrentParameters.Clear();
 

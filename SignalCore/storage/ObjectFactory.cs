@@ -21,6 +21,7 @@ public class ObjectFactory
         public required object Instance { get; set; }
         public required string TypeFullName { get; set; }
         
+        [System.Text.Json.Serialization.JsonIgnore]
         public Type Type
         {
             get => GetTypeFromFullName(TypeFullName);
@@ -30,6 +31,7 @@ public class ObjectFactory
     public static string GetTypeFullName(Type t)
         => t.AssemblyQualifiedName ?? throw new Exception($"Cannot deduce assembly type name of type {t.Name}");
     public string TypeFullName { get; set; } = ""; // type.AssemblyQualifiedName
+    [System.Text.Json.Serialization.JsonIgnore]
     public Type Type => GetTypeFromFullName(TypeFullName);
     public IDictionary<string, Argument> ConstructorArguments { get; set; } = new Dictionary<string,Argument>();
     
@@ -111,11 +113,10 @@ public class ObjectFactory
     }
     
     // Private helper methods
-    private static Type GetTypeFromFullName(string typeFullName)=>
+    static Type GetTypeFromFullName(string typeFullName)=>
      Type.GetType(typeFullName) ?? throw new ArgumentException($"Type not found: {typeFullName}");
     
-    
-    private static Dictionary<string, Argument> ConvertArgsToArguments(IDictionary<string, object> args)
+    static Dictionary<string, Argument> ConvertArgsToArguments(IDictionary<string, object> args)
         => args.ToDictionary(
             v => v.Key,
             v => new Argument
@@ -124,10 +125,10 @@ public class ObjectFactory
                 TypeFullName = GetTypeFullName(v.Value?.GetType() ?? throw new ArgumentException("Cannot get type of null value"))
             }
         );
-    private static Dictionary<string, object> ConvertTupleArgsToDictionary((string fieldName, object value)[] args)
+    static Dictionary<string, object> ConvertTupleArgsToDictionary((string fieldName, object value)[] args)
         => args.ToDictionary(v => v.fieldName, v => v.value);
     
-    private static object DeserializeIfJsonElement(object value, Type targetType)
+    static object DeserializeIfJsonElement(object value, Type targetType)
     {
         if (value is JsonElement jsonElement)
         {
