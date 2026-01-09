@@ -6,16 +6,26 @@
         x:DataType="vm:CompositeComponentViewModel"
         Title="Saved Signals"
         Width="500" Height="400"
+        MinWidth="400" MinHeight="300"
         WindowStartupLocation="CenterOwner">
-  
-  <StackPanel Margin="20">
-    <TextBlock Text="Manage Saved Signals" 
-               FontSize="16" 
-               FontWeight="Bold" 
-               Margin="0,0,0,20" 
-               HorizontalAlignment="Center"/>
 
-    <ScrollViewer MaxHeight="250" Margin="0,0,0,20">
+  <DockPanel Margin="20">
+    <TextBlock Text="Manage Saved Signals"
+               FontSize="16"
+               FontWeight="Bold"
+               Margin="0,0,0,20"
+               HorizontalAlignment="Center"
+               DockPanel.Dock="Top"/>
+
+    <Button x:Name="CloseButton"
+            Content="Close"
+            Width="80"
+            Height="30"
+            HorizontalAlignment="Right"
+            Click="CloseButton_Click"
+            DockPanel.Dock="Bottom"/>
+
+    <ScrollViewer Margin="0,0,0,20">
       <ItemsControl ItemsSource="{Binding SavedGuiInstances}">
         <ItemsControl.ItemTemplate>
           <DataTemplate>
@@ -46,13 +56,5 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
     </ScrollViewer>
-
-    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-      <Button x:Name="CloseButton" 
-              Content="Close" 
-              Width="80" 
-              Height="30" 
-              Click="CloseButton_Click"/>
-    </StackPanel>
-  </StackPanel>
+  </DockPanel>
 </Window>
