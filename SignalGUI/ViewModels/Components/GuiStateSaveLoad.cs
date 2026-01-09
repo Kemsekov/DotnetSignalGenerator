@@ -223,5 +223,8 @@ public partial class CompositeComponentViewModel : ViewModelBase
         ShowSavedSignalsCommand = new RelayCommand(ShowSavedSignals);
         LoadSpecificGuiInstanceCommand = new RelayCommand<GuiSignalInstance>(LoadSpecificGuiInstance);
         RemoveGuiInstanceCommand = new RelayCommand<GuiSignalInstance>(RemoveGuiInstance);
+
+        // Initialize search functionality
+        InitializeSearchFunctionality();
     }
 }
