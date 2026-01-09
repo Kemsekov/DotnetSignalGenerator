@@ -46,12 +46,12 @@ public partial class CompositeComponentViewModel : ViewModelBase
     /// <summary>
     /// Method to get snapshot of current GUI
     /// </summary>
-    public GuiSignalInstance SaveGuiInstance()
+    public GuiSignalInstance CreateGuiInstanceSnapshot()
     {
         return new()
         {
             ComputeSignal = _computeSignal?.Clone(),
-            SignalStatistics = 
+            SignalStatistics =
                 SignalStatistics?
                 .Select(v=>(v.Name,v.Stat))
                 .ToArray(),
@@ -59,9 +59,9 @@ public partial class CompositeComponentViewModel : ViewModelBase
             CompletedPercent = CompletedPercent,
             Expression = Expression,
             NextSourceLetterIndex = _nextSourceLetterIndex,
-            Sources = 
+            Sources =
                 Sources.Select(v=>v.Factory?.Clone()).ToArray(),
-            Filters = 
+            Filters =
                 Filters
                 .Select(v=>(v.Enabled,v.Factory?.Clone())).ToArray(),
             SignalParams = SignalParams?.Clone(),
@@ -77,26 +77,45 @@ public partial class CompositeComponentViewModel : ViewModelBase
     /// </summary>
     public void SaveGuiInstance(string name)
     {
-        var instance = SaveGuiInstance();
-        instance.ObjectName = name; // Update the name to the provided one
+        try
+        {
+            System.Console.WriteLine($"Inside SaveGuiInstance with name: {name}");
+            var instance = CreateGuiInstanceSnapshot();
+            System.Console.WriteLine($"Created instance with ObjectName: {instance.ObjectName}");
+            instance.ObjectName = name; // Update the name to the provided one
+            System.Console.WriteLine($"Set instance ObjectName to: {instance.ObjectName}");
 
-        // Check if an instance with the same name already exists
-        var existingIndex = -1;
-        for (int i = 0; i < SavedGuiInstances.Count; i++)
-            if (SavedGuiInstances[i].ObjectName == name)
+            // Check if an instance with the same name already exists
+            var existingIndex = -1;
+            for (int i = 0; i < SavedGuiInstances.Count; i++)
             {
-                existingIndex = i;
-                break;
+                System.Console.WriteLine($"Checking existing instance {i}: {SavedGuiInstances[i].ObjectName}");
+                if (SavedGuiInstances[i].ObjectName?.Equals(name) == true)
+                {
+                    existingIndex = i;
+                    System.Console.WriteLine($"Found existing instance at index: {existingIndex}");
+                    break;
+                }
             }
 
-        if (existingIndex >= 0)
-        {
-            // Replace the existing instance
-            SavedGuiInstances[existingIndex] = instance;
+            if (existingIndex >= 0)
+            {
+                // Replace the existing instance
+                SavedGuiInstances[existingIndex] = instance;
+                System.Console.WriteLine($"Replaced instance at index: {existingIndex}");
+            }
+            else
+            {
+                // Add the new instance
+                SavedGuiInstances.Add(instance);
+                System.Console.WriteLine($"Added new instance. Total count: {SavedGuiInstances.Count}");
+            }
         }
-        else
-            // Add the new instance
-            SavedGuiInstances.Add(instance);
+        catch (Exception ex)
+        {
+            // In a real application, you'd want to log this properly
+            System.Console.WriteLine($"Error in SaveGuiInstance: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -139,16 +158,67 @@ public partial class CompositeComponentViewModel : ViewModelBase
     }
 
    
+    public ICommand? ShowSavedSignalsCommand { get; set; }
+    public ICommand? LoadSpecificGuiInstanceCommand { get; set; }
+    public ICommand? RemoveGuiInstanceCommand { get; set; }
+
     // Initialize the commands in the constructor
     public CompositeComponentViewModel()
     {
         SaveGuiInstanceCommand = new RelayCommand(SaveCurrentGuiInstance);
         LoadGuiInstanceCommand = new RelayCommand(LoadSelectedGuiInstance);
+        ShowSavedSignalsCommand = new RelayCommand(ShowSavedSignals);
+        LoadSpecificGuiInstanceCommand = new RelayCommand<GuiSignalInstance>(LoadSpecificGuiInstance);
+        RemoveGuiInstanceCommand = new RelayCommand<GuiSignalInstance>(RemoveGuiInstance);
+    }
+
+    public Action? ShowSavedSignalsAction { get; set; }
+    public Action? CloseSavedSignalsWindowAction { get; set; }
+
+    private void ShowSavedSignals()
+    {
+        System.Console.WriteLine($"ShowSavedSignals called. SavedGuiInstances count: {SavedGuiInstances.Count}");
+        ShowSavedSignalsAction?.Invoke();
+    }
+
+    private void LoadSpecificGuiInstance(GuiSignalInstance instance)
+    {
+        System.Console.WriteLine($"LoadSpecificGuiInstance called with instance: {(instance?.ObjectName ?? "null")}");
+        if (instance != null)
+        {
+            System.Console.WriteLine($"Loading instance with ObjectName: {instance.ObjectName}");
+            LoadGuiInstance(instance);
+        }
+    }
+
+    private void RemoveGuiInstance(GuiSignalInstance instance)
+    {
+        System.Console.WriteLine($"RemoveGuiInstance called with instance: {(instance?.ObjectName ?? "null")}");
+        if (instance != null)
+        {
+            System.Console.WriteLine($"Removing instance with ObjectName: {instance.ObjectName}. Before removal count: {SavedGuiInstances.Count}");
+            SavedGuiInstances.Remove(instance);
+            System.Console.WriteLine($"After removal count: {SavedGuiInstances.Count}");
+        }
     }
 
     private void SaveCurrentGuiInstance()
     {
-        SaveGuiInstance(ObjectName); // Use the current ObjectName as the instance name
+        try
+        {
+            var name = string.IsNullOrWhiteSpace(ObjectName) ? "Unnamed" : ObjectName;
+            System.Console.WriteLine($"Attempting to save GUI instance with name: {name}");
+            System.Console.WriteLine($"Current SavedGuiInstances count: {SavedGuiInstances.Count}");
+
+            SaveGuiInstance(name); // Use the current ObjectName as the instance name
+
+            System.Console.WriteLine($"After save, SavedGuiInstances count: {SavedGuiInstances.Count}");
+        }
+        catch (Exception ex)
+        {
+            // In a real application, you'd want to log this properly
+            System.Console.WriteLine($"Error saving GUI instance: {ex.Message}");
+        }
     }
 
     private void LoadSelectedGuiInstance()

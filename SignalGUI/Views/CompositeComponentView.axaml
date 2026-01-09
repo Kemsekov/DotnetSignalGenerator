@@ -26,18 +26,16 @@
   </UserControl.Resources>
 
   <StackPanel Orientation="Vertical" Margin="10">
+    <!-- Saved Signals and Save Buttons -->
+    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+      <Button Content="Saved Signals" Command="{Binding ShowSavedSignalsCommand}"
+              Margin="0,0,10,0" VerticalAlignment="Center" />
+      <Button Content="Save" Command="{Binding SaveGuiInstanceCommand}"
+              Margin="0,0,10,0" VerticalAlignment="Center" />
+    </StackPanel>
+
     <!-- Object Name Field with Signal Parameters and Compute Button -->
     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-      <ComboBox ItemsSource="{Binding SavedGuiInstances}"
-                SelectedItem="{Binding SelectedGuiInstance, Mode=TwoWay}"
-                SelectionChanged="OnSavedInstanceSelectionChanged"
-                Width="150" Margin="0,0,10,0" VerticalAlignment="Center">
-        <ComboBox.ItemTemplate>
-          <DataTemplate>
-            <TextBlock Text="{Binding ObjectName}" />
-          </DataTemplate>
-        </ComboBox.ItemTemplate>
-      </ComboBox>
       <TextBlock Text="Object Name:" VerticalAlignment="Center" Margin="0,0,10,0" />
       <TextBox Text="{Binding ObjectName}" Width="200" />
       <Button Content="Signal Parameters" Command="{Binding SelectSignalParamsCommand}"
@@ -48,8 +46,6 @@
               Margin="10,0,0,0" VerticalAlignment="Center" />
       <TextBlock Text="{Binding CompletedPercent, StringFormat='Completed: {0}%'}"
                  VerticalAlignment="Center" Margin="10,0,0,0" />
-      <Button Content="Save" Command="{Binding SaveGuiInstanceCommand}"
-              Margin="10,0,0,0" VerticalAlignment="Center" />
     </StackPanel>
 
     <!-- Main Container with four columns: Parameters Panel + Source + Expression + Filter -->

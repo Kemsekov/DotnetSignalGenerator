@@ -25,6 +25,14 @@ public partial class CompositeComponentView : UserControl
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
+        if (DataContext is CompositeComponentViewModel viewModel)
+        {
+            viewModel.ShowSavedSignalsAction = () =>
+            {
+                var savedSignalsWindow = new SavedSignalsWindow(viewModel);
+                savedSignalsWindow.Show();
+            };
+        }
     }
 
     // Event handler for when a drag handle is pressed
@@ -204,6 +212,17 @@ public partial class CompositeComponentView : UserControl
             {
                 viewModel.LoadGuiInstanceCommand.Execute(null);
             }
+        }
+    }
+
+    // Event handler for showing the saved signals window
+    public void OnShowSavedSignals(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is CompositeComponentViewModel viewModel)
+        {
+            var savedSignalsWindow = new SavedSignalsWindow();
+            savedSignalsWindow.DataContext = viewModel;
+            savedSignalsWindow.Show();
         }
     }
 }
