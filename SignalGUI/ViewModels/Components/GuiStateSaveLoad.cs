@@ -12,6 +12,8 @@ using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 using Avalonia.Media.Imaging;
 using DynamicData;
+using SignalCore.Storage;
+using SQLiteNetExtensions.Extensions;
 
 namespace SignalGUI.ViewModels;
 
@@ -24,31 +26,90 @@ public partial class GuiSignalInstance : ObservableObject
 {
     [ObservableProperty]
     string _objectName = "";
-    public required ComputeSignal? ComputeSignal;
-    public required (string name, float stat)[]? SignalStatistics;
-    public required int CompletedPercent;
-    public required string Expression;
-    public required int NextSourceLetterIndex;
-    public required IEnumerable<GuiObjectFactory?> Sources;
-    public required IEnumerable<(bool visible, GuiObjectFactory? factory)> Filters;
-    public required GuiObjectFactory? SignalParams;
 
-    // Chart properties
-    public required IEnumerable<ISeries> Series;
-    public required IEnumerable<Axis> XAxes;
-    public required IEnumerable<Axis> YAxes;
-    public required Bitmap? Image;
+    public GuiSignalInstance(string objectName)
+    {
+        _objectName=objectName;
+    }
+    public void LoadFromDB(SignalStorage signalStorage)
+    {
+        var s = signalStorage.db.Table<SessionModel>().FirstOrDefault(v=>v.Name== ObjectName);
+        if(s is null)
+            throw new KeyNotFoundException($"Cannot find database signal instance with name {ObjectName}");
+        
+        s = signalStorage.db.GetWithChildren<SessionModel>(s.Id);
+        var sFields = signalStorage.GetSessionState(s.Id);
+        // s.Signal.GetNdarray
+        var computedSignal = new ComputedSignal(
+            s.SignalX.GetNdarray(),
+            s.SignalY.GetNdarray(),
+            s.SignalStatistics.Select(v=>(v.Statistic,v.Name)).ToArray()
+        );
+        var filters = sFields.Filters.Select(v=>(
+            visible: v.Enabled,
+            name:v.VarName,
+            factory:v.Filter.Factory
+        ));
+        var transforms = sFields.Transforms.Select(v=>(
+            visible: v.Enabled,
+            name:v.VarName,
+            factory:v.Transform.Factory
+        ));
+
+        var generations = sFields.Generations.Select(v=>(
+            name:v.VarName,
+            factory:v.Generation.Factory
+        ));
+
+        var norms = sFields.Normalizations.Select(v=>(
+            visible: v.Enabled,
+            name:v.VarName,
+            factory:v.Normalization.Factory
+        ));
+        var ops = 
+            new[]{filters,transforms,norms}
+            .SelectMany(v=>v)
+            .OrderBy(v=>v.name)
+            .Select(v=>(v.visible,new GuiObjectFactory(v.factory)))
+            .ToArray() ?? throw new Exception();
+
+        ObjectName=s.Name;
+        ComputedSignal=computedSignal;
+        Expression=s.Expression;
+        Filters=ops;
+        SignalParams = new(new ObjectFactory(
+            typeof(SignalParameters),
+            [
+                ("computePoints",s.ComputePoints),
+                ("renderPoints",256)
+            ]
+        ));
+        SignalStatistics=s.SignalStatistics.Select(v=>(v.Name,v.Statistic)).ToArray();
+        Sources=generations.Select(v=>new GuiObjectFactory(v.factory)).ToArray();
+    }
+    
+    public required ComputedSignal? ComputedSignal=null;
+    public required (string name, float stat)[]? SignalStatistics;
+    public required int CompletedPercent=0;
+    public required IEnumerable<GuiObjectFactory> Sources=[];
+    public required string Expression="";
+    public required IEnumerable<(bool visible, GuiObjectFactory factory)> Filters=[];
+    public required GuiObjectFactory? SignalParams=null;
 }
 public partial class CompositeComponentViewModel : ViewModelBase
 {
+    public void LoadSessionsFromDB()
+    {
+        
+    }
     /// <summary>
     /// Method to get snapshot of current GUI
     /// </summary>
     public GuiSignalInstance CreateGuiInstanceSnapshot()
     {
-        return new()
+        return new(ObjectName)
         {
-            ComputeSignal = _computeSignal?.Clone(),
+            ComputedSignal = _computedSignal?.Clone(),
             SignalStatistics =
                 SignalStatistics?
                 .Select(v=>(v.Name,v.Stat))
@@ -56,17 +117,12 @@ public partial class CompositeComponentViewModel : ViewModelBase
             ObjectName = ObjectName,
             CompletedPercent = CompletedPercent,
             Expression = Expression,
-            NextSourceLetterIndex = _nextSourceLetterIndex,
             Sources =
-                Sources.Select(v=>v.Factory?.Clone()).ToArray(),
+                Sources.Select(v=>v.Factory.Clone()).ToArray(),
             Filters =
                 Filters
-                .Select(v=>(v.Enabled,v.Factory?.Clone())).ToArray(),
+                .Select(v=>(v.Enabled,v.Factory.Clone())).ToArray(),
             SignalParams = SignalParams?.Clone(),
-            Series = Series.ToArray(),
-            XAxes = XAxes.ToArray(),
-            YAxes = YAxes.ToArray(),
-            Image=RenderedImage
         };
     }
 
@@ -121,7 +177,8 @@ public partial class CompositeComponentViewModel : ViewModelBase
     /// </summary>
     public void LoadGuiInstance(GuiSignalInstance instance)
     {
-        _computeSignal = instance.ComputeSignal;
+        instance.LoadFromDB(SessionStorage);
+        _computedSignal = instance.ComputedSignal;
 
         var stats = instance.SignalStatistics?.Select(v=> new SignalStatisticViewModel(v.name,v.stat)).ToArray();
         if(stats is not null)
@@ -129,7 +186,6 @@ public partial class CompositeComponentViewModel : ViewModelBase
         ObjectName = instance.ObjectName;
         CompletedPercent = instance.CompletedPercent;
         Expression = instance.Expression;
-        _nextSourceLetterIndex = instance.NextSourceLetterIndex;
         
         Sources.Clear();
         Sources.AddRange(instance.Sources.Select(v=>new SourceItemViewModel
@@ -148,11 +204,8 @@ public partial class CompositeComponentViewModel : ViewModelBase
 
         SignalParams = instance.SignalParams;
         Series.Clear();
-        Series.AddRange(instance.Series);
-        RenderedImage = instance.Image;
-
-        XAxes = [.. instance.XAxes];
-        YAxes = [.. instance.YAxes];
+        PlotLine();
+        Plot2DImage();
     }
 
     public ICommand? ShowSavedSignalsCommand { get; set; }

@@ -12,17 +12,25 @@ public class GuiObjectFactory : ICloneable
     string _objectName;
     public Type ObjType { get; set; }
     public IDictionary<string, Type> Arguments { get; set; } = new Dictionary<string,Type>();
-    IDictionary<string, (Type type, object? defaultValue)> _ctor_arguments;
+    Dictionary<string, (Type type, object? defaultValue)> _ctor_arguments;
     public IDictionary<string, object> InstanceArguments { get; set; } = new Dictionary<string,object>();
     public string Name => _objectName;
-    public GuiObjectFactory(Type objType, IDictionary<string, (Type type, object? defaultValue)> arguments,string? objectName = null)
+    public GuiObjectFactory(ObjectFactory objectFactory,string? objectName = null)
+    {
+        ObjType = objectFactory.Type;
+        Arguments = objectFactory.ConstructorArguments.ToDictionary(v=>v.Key,v=>v.Value.Type);
+        _ctor_arguments=objectFactory.ConstructorArguments.ToDictionary(v=>v.Key,v=>(v.Value.Type,v.Value?.Instance));
+        InstanceArguments = objectFactory.ConstructorArguments.ToDictionary(v=>v.Key,v=>v.Value.Instance);
+        _objectName = objectName ?? ObjType.Name;
+    }
+    public GuiObjectFactory(Type objType, Dictionary<string, (Type type, object? defaultValue)>? arguments,string? objectName = null)
     {
         ObjType = objType;
-        Arguments = arguments.ToDictionary(v=>v.Key,v=>v.Value.type);
-        this._ctor_arguments=arguments;
+        Arguments = arguments?.ToDictionary(v=>v.Key,v=>v.Value.type) ?? new Dictionary<string, Type>();
+        _ctor_arguments=arguments ?? [];
         // System.Console.WriteLine(objType.Name);
         // Initialize instance arguments with default values
-        foreach (var arg in arguments)
+        foreach (var arg in _ctor_arguments)
         {
             var defaultArgument = arg.Value.defaultValue ??
                 ArgumentsTypesUtils.GetDefaultValue(arg.Value.type);

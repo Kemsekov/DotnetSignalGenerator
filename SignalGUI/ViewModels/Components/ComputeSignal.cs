@@ -70,10 +70,11 @@ public partial class CompositeComponentViewModel
 
         computeSignal.OnExecutionDone += () =>
         {
+            var result = computeSignal.ComputedSignal;
             // Update signal statistics
             Dispatcher.UIThread.Post(() =>
             {
-                SignalStatistics = computeSignal.Stats?.Select(v=> new SignalStatisticViewModel(v.name,v.stat)).ToArray();
+                SignalStatistics = result.Stats?.Select(v=> new SignalStatisticViewModel(v.name,v.stat)).ToArray();
             });
             // Automatically plot as a line chart after computation is done
             // Need to dispatch to UI thread since this event is called from background thread
@@ -82,13 +83,14 @@ public partial class CompositeComponentViewModel
         };
 
         computeSignal.Run();
-        _computeSignal=computeSignal;
+        _computedSignal=computeSignal.ComputedSignal;
+        _runningComputation=computeSignal;
     }
 
     [RelayCommand]
     void Cancel()
     {
-        _computeSignal?.Cancel();
+        _runningComputation?.Cancel();
     }
 
     Exception? ParseComputeArguments(

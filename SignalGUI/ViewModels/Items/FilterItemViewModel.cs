@@ -5,7 +5,7 @@ namespace SignalGUI.ViewModels;
 public partial class FilterItemViewModel : ViewModelBase
 {
     [ObservableProperty]
-    GuiObjectFactory? _factory;
+    GuiObjectFactory _factory = new(typeof(object),null);
 
     [ObservableProperty]
     bool _enabled = true;

@@ -14,9 +14,9 @@ public partial class CompositeComponentViewModel
     [RelayCommand]
     void PlotLine()
     {
-        var _xValues = _computeSignal?.X;
-        var _yValues = _computeSignal?.Y;
-        var _yImagValues = _computeSignal?.YImag;
+        var _xValues = _computedSignal?.X;
+        var _yValues = _computedSignal?.Y;
+        var _yImagValues = _computedSignal?.YImag;
         if (_xValues != null && _yValues != null)
         {
             var x = np.array(_xValues,copy:false).resample([SignalParameters.RenderPoints]);
@@ -54,9 +54,9 @@ public partial class CompositeComponentViewModel
     [RelayCommand]
     void PlotScatter()
     {
-        var _xValues = _computeSignal?.X;
-        var _yValues = _computeSignal?.Y;
-        var _yImagValues = _computeSignal?.YImag;
+        var _xValues = _computedSignal?.X;
+        var _yValues = _computedSignal?.Y;
+        var _yImagValues = _computedSignal?.YImag;
         if (_xValues != null && _yValues != null)
         {
             var x = np.array(_xValues,copy:false).resample([SignalParameters.RenderPoints]);
@@ -100,7 +100,7 @@ public partial class CompositeComponentViewModel
     [RelayCommand]
     void Plot2DImage()
     {
-        var _2DData = _computeSignal?.ImageData;
+        var _2DData = _computedSignal?.ImageData;
         if (_2DData != null)
         {
             var renderPoints = SignalParameters.RenderPoints;
@@ -143,7 +143,7 @@ public partial class CompositeComponentViewModel
     [RelayCommand]
     void Plot2DComplexImage()
     {
-        var _2DData = _computeSignal?.ImageData;
+        var _2DData = _computedSignal?.ImageData;
         if (_2DData != null && _2DData.Dtype == np.Complex)
         {
             var skImage = RenderUtils.RenderComplexArrayAsImage(_2DData, 800, 600);

@@ -12,6 +12,7 @@ using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 using Avalonia.Media.Imaging;
 using DynamicData;
+using SignalCore.Storage;
 
 namespace SignalGUI.ViewModels;
 
@@ -47,7 +48,9 @@ public partial class CompositeComponentViewModel : ViewModelBase
     [ObservableProperty]
     ObservableCollection<ParameterViewModelWithCallback> _currentParameters = new();
 
-    ComputeSignal? _computeSignal;
+    ComputeSignal? _runningComputation;
+
+    ComputedSignal? _computedSignal;
     [ObservableProperty]
     SignalStatisticViewModel[]? _signalStatistics;
 
@@ -81,6 +84,8 @@ public partial class CompositeComponentViewModel : ViewModelBase
     // Property to hold the rendered 2D image
     [ObservableProperty]
     Bitmap? _renderedImage;
+
+    SignalStorage SessionStorage = new("signals.db");
 
     // Collection to store saved GUI instances
     public ObservableCollection<GuiSignalInstance> SavedGuiInstances { get; set; } = new();

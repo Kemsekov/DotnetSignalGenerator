@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using SignalCore;
 using SignalGUI.Utils;
 
@@ -22,7 +23,8 @@ public class SignalParameters
     {
         var ctor = 
             typeof(SignalParameters)
-            .GetSupportedConstructor(ArgumentsTypesUtils.SupportedTypes);
-        return new GuiObjectFactory(typeof(SignalParameters),ctor ?? throw new Exception());
+            .GetSupportedConstructor(ArgumentsTypesUtils.SupportedTypes)?
+            .ToDictionary(v=>v.Key,v=>v.Value);
+        return new GuiObjectFactory(typeof(SignalParameters),ctor ?? throw new Exception(),null);
     }
 }
