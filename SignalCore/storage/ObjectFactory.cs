@@ -84,26 +84,72 @@ public class ObjectFactory : ICloneable
         ValidateInstanceArgumentsType();
 
         var type = GetTypeFromFullName(TypeFullName);
-        var constructorTypes = ConstructorArguments.Values
-            .Select(arg => GetTypeFromFullName(arg.TypeFullName))
-            .ToArray();
-        
-        var constructorInfo = type.GetConstructor(
-            BindingFlags.Public | BindingFlags.Instance,
-            null,
-            constructorTypes,
-            null
-        );
-        
+
+        // Get all public instance constructors
+        var constructors = type.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+
+        // Find a constructor that matches our arguments (with type compatibility)
+        ConstructorInfo? constructorInfo = null;
+        object[]? constructorParameters = null;
+
+        foreach (var ctor in constructors)
+        {
+            var parameters = ctor.GetParameters();
+            // Check if we have enough arguments (can be fewer if parameters have defaults)
+            // We should have AT MOST as many stored arguments as there are parameters
+            if (ConstructorArguments.Count > parameters.Length)
+                continue;
+
+            // Try to match parameters with our stored arguments by name
+            var paramList = new object?[parameters.Length];
+            bool match = true;
+
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                var parameter = parameters[i];
+                var paramName = parameter.Name;
+
+                // Look for the corresponding argument by name
+                if (ConstructorArguments.TryGetValue(paramName, out var arg))
+                {
+                    // Try to convert the stored argument to the expected parameter type
+                    try
+                    {
+                        var convertedArg = arg.Instance?.CastOrThrow(parameter.ParameterType);
+                        paramList[i] = convertedArg;
+                    }
+                    catch
+                    {
+                        match = false;
+                        break;
+                    }
+                }
+                else if (parameter.HasDefaultValue)
+                {
+                    // Use the default value if available
+                    paramList[i] = parameter.DefaultValue;
+                }
+                else
+                {
+                    // Parameter name not found in stored arguments and no default value
+                    match = false;
+                    break;
+                }
+            }
+
+            if (match)
+            {
+                constructorInfo = ctor;
+                constructorParameters = paramList;
+                break;
+            }
+        }
+
         if (constructorInfo == null)
         {
             throw new InvalidOperationException($"No matching constructor found for type: {type.FullName}");
         }
-        //once again check and reparse
-        var constructorParameters = ConstructorArguments.Values
-            .Select(arg => arg.Instance)
-            .ToArray();
-        
+
         return constructorInfo.Invoke(constructorParameters);
     }
     public void ValidateInstanceArgumentsType()

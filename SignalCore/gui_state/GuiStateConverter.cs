@@ -26,13 +26,13 @@ public static class GuiStateConverter
             s.SignalY.GetNdarray(),
             s.SignalStatistics.Select(v => (v.Statistic, v.Name)).ToArray()
         );
-        
+
         var filters = sFields.Filters.Select(v => (
             visible: v.Enabled,
             name: v.VarName,
             factory: v.Filter.Factory
         ));
-        
+
         var transforms = sFields.Transforms.Select(v => (
             visible: v.Enabled,
             name: v.VarName,
@@ -59,6 +59,7 @@ public static class GuiStateConverter
         return new GuiSignalState(
             objectName: s.Name,
             computedSignal: computedSignal,
+            completedPercent: s.CompletedPercent,
             expression: s.Expression,
             filters: ops,
             signalParams: new ObjectFactory(
@@ -83,6 +84,7 @@ public static class GuiStateConverter
             ComputePoints = state.SignalParams?.ConstructorArguments.ContainsKey("computePoints") ?? false
                 ? Convert.ToInt32(state.SignalParams?.ConstructorArguments["computePoints"].Instance ?? 1024)
                 : 1024,
+            CompletedPercent = state.CompletedPercent,
             SignalX = new NDarrayBinaryDataModel(),
             SignalY = new NDarrayBinaryDataModel(),
             SignalStatistics = state.SignalStatistics?.Select(v => new SignalStatistic { Name = v.name, Statistic = v.stat }).ToList() ?? []
@@ -194,18 +196,24 @@ public static class GuiStateConverter
     {
         // Check if the factory's object type is related to filtering
         // This could be based on interface implementation or naming convention
-        return op.factory.Type.Name.ToLower().Contains("filter");
+        var typeName = op.factory.Type.Name.ToLower();
+        // Check if it's specifically a filter but not a transform or normalization
+        return (typeName.Contains("filter") || typeName.Contains("noise")) &&
+               !typeName.Contains("transform") &&
+               !typeName.Contains("normalize");
     }
 
     private static bool IsTransformOperation((bool visible, ObjectFactory factory) op)
     {
         // Check if the factory's object type is related to transformation
-        return op.factory.Type.Name.ToLower().Contains("transform");
+        var typeName = op.factory.Type.Name.ToLower();
+        return typeName.Contains("transform") || typeName.Contains("fft") || typeName.Contains("fwt");
     }
 
     private static bool IsNormalizationOperation((bool visible, ObjectFactory factory) op)
     {
         // Check if the factory's object type is related to normalization
-        return op.factory.Type.Name.ToLower().Contains("normalize");
+        var typeName = op.factory.Type.Name.ToLower();
+        return typeName.Contains("normalize") || typeName.Contains("normalization");
     }
 }

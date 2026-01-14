@@ -64,6 +64,11 @@ public class SessionModel
     /// </summary>
     public int ComputePoints { get; set; } = 1024;
 
+    /// <summary>
+    /// Percentage of completion for the computation
+    /// </summary>
+    public int CompletedPercent { get; set; } = 0;
+
     [ForeignKey(typeof(NDarrayBinaryDataModel))]
     public long SignalXId { get; set; }
     /// <summary>
@@ -71,7 +76,7 @@ public class SessionModel
     /// </summary>
     [ManyToOne("SignalXId")]
     public NDarrayBinaryDataModel SignalX{get;set;} = new();
-    
+
     [ForeignKey(typeof(NDarrayBinaryDataModel))]
     public long SignalYId { get; set; }
     /// <summary>
