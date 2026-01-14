@@ -27,7 +27,8 @@ public class DataModel : Attribute
 public class SignalStorage : IDisposable
 {
     public SQLiteConnection db;
-    public SignalStorage(string dbPath)
+    //by default create in-memory database
+    public SignalStorage(string dbPath = ":memory:")
     {
         // Establish connection
         db = new SQLiteConnection(dbPath);
@@ -41,25 +42,61 @@ public class SignalStorage : IDisposable
     }
     public void AddSessionState(SessionStateModel m)
     {
+        bool sessionExists = false;
         // if we encounter object with same name just replace it
         try
-        {m.Session.Id=db.Find<SessionModel>(v=>v.Name==m.Session.Name).Id;}
-        catch{}
-
-        db.InsertOrReplaceWithChildren(m.Session.SignalX);
-        db.InsertOrReplaceWithChildren(m.Session.SignalY);
+        {
+            var existingSessions = db.GetAllWithChildren<SessionModel>(v => v.Name == m.Session.Name);
+            foreach(var s in existingSessions)
+                DeleteSession(s.Id);
+        }
+        catch { }
         
-        db.InsertOrReplaceAllWithChildren(m.Transforms.Select(v=>v.Transform),recursive:true);
-        db.InsertOrReplaceAllWithChildren(m.Normalizations.Select(v=>v.Normalization),recursive:true);
-        db.InsertOrReplaceAllWithChildren(m.Filters.Select(v=>v.Filter),recursive:true);
-        db.InsertOrReplaceAllWithChildren(m.Generations.Select(v=>v.Generation),recursive:true);
+        Action<object,bool> insertionMethod = sessionExists ? db.InsertOrReplaceWithChildren : db.InsertWithChildren;
 
-        db.InsertOrReplaceWithChildren(m.Session,recursive:true);
+        System.Console.WriteLine(db.Table<NDarrayBinaryDataModel>().Count());
+        // db.InsertOrReplaceWithChildren(m.Session.SignalX);
+        // Insert or replace the signal data first to get their IDs
+        insertionMethod(m.Session.SignalX,true);
+        insertionMethod(m.Session.SignalY,true);
+        System.Console.WriteLine(db.Table<NDarrayBinaryDataModel>().Count());
 
-        db.InsertOrReplaceAllWithChildren(m.Transforms,recursive:true);
-        db.InsertOrReplaceAllWithChildren(m.Normalizations,recursive:true);
-        db.InsertOrReplaceAllWithChildren(m.Filters,recursive:true);
-        db.InsertOrReplaceAllWithChildren(m.Generations,recursive:true);
+        // Update the session model with the correct foreign key IDs
+        m.Session.SignalXId = m.Session.SignalX.Id;
+        m.Session.SignalYId = m.Session.SignalY.Id;
+        // Insert or replace the session model with updated foreign key IDs first
+        insertionMethod(m.Session,true);
+
+        // Now insert or replace all operations separately without recursive children to avoid session duplication
+        // These operations reference the session by ID, so the session must exist first
+        foreach (var transform in m.Transforms)
+        {
+            transform.SessionId = m.Session.Id;
+            insertionMethod(transform,true);
+            insertionMethod(transform.Transform,true);
+        }
+
+        foreach (var normalization in m.Normalizations)
+        {
+            normalization.SessionId = m.Session.Id;
+            insertionMethod(normalization,true);
+            insertionMethod(normalization.Normalization,true);
+        }
+
+        foreach (var generation in m.Generations)
+        {
+            generation.SessionId = m.Session.Id;
+            insertionMethod(generation,true);
+            insertionMethod(generation.Generation,true);
+        }
+
+        foreach (var filter in m.Filters)
+        {
+            filter.SessionId = m.Session.Id;
+            insertionMethod(filter,true);
+            insertionMethod(filter.Filter,true);
+        }
+
     }
     /// <summary>
     /// Fetch full session state from Db
@@ -99,8 +136,10 @@ public class SignalStorage : IDisposable
     /// </summary>
     public void DeleteSession(long id)
     {
+        System.Console.WriteLine("a");
         // First get the session state to identify all related objects
         var sessionState = GetSessionState(id);
+        System.Console.WriteLine("b");
 
         // Delete in reverse order of creation/relation to avoid foreign key constraint violations
 

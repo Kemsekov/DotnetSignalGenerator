@@ -13,6 +13,7 @@ using LiveChartsCore.SkiaSharpView;
 using Avalonia.Media.Imaging;
 using DynamicData;
 using SignalCore.Storage;
+using SignalCore.Parameters;
 
 namespace SignalGUI.ViewModels;
 
@@ -68,7 +69,6 @@ public partial class CompositeComponentViewModel : ViewModelBase
     public List<string> AvailableSourcesForExpression => Sources.Select(s => s.Letter).ToList();
     [ObservableProperty]
     ObjectFactory? _signalParams = SignalParameters.CreateFactory();
-
     public SignalParameters SignalParameters => SignalParams?.CreateInstance() as SignalParameters ?? 
                 throw new ArgumentException("Failed to cast SignalParameters");
     // Chart properties

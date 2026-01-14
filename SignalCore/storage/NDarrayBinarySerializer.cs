@@ -10,7 +10,7 @@ public class NDarrayBinaryDataModel
         SetNdarray(np.array(new[]{0.0}));
     }
     [PrimaryKey, AutoIncrement]
-    public long Id{get;set;}
+    public long Id{get;set;} = -1;
     public byte[] DataReal { get; set; } = [];
     public byte[] DataImag { get; set; } = [];
     public float SignalMinReal{get;set;}=0;

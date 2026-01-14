@@ -9,6 +9,7 @@ using NumpyDotNet;
 using Avalonia.Threading;
 using System.Collections.Generic;
 using SignalGUI.Utils;
+using SignalCore.Parameters;
 
 namespace SignalGUI.ViewModels;
 

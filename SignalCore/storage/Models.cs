@@ -95,7 +95,7 @@ public abstract class ManyToSession
     public string VarName { get; set; } = "";
     [ForeignKey(typeof(SessionModel))]
     public long SessionId { get; set; }
-    [ManyToOne(CascadeOperations = CascadeOperation.All)]
+    [ManyToOne]
     public SessionModel? Session { get; set; }
 }
 

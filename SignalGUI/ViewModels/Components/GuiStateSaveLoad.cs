@@ -15,6 +15,7 @@ using Avalonia.Media.Imaging;
 using DynamicData;
 using SignalCore.Storage;
 using SQLiteNetExtensions.Extensions;
+using SignalCore.GuiState;
 
 namespace SignalGUI.ViewModels;
 
@@ -28,212 +29,52 @@ public partial class GuiSignalInstance : ObservableObject
     [ObservableProperty]
     string _objectName = "";
 
+    // Core GUI state that contains all the important data except the GUI-specific properties
+    public GuiSignalState CoreState { get; set; }
+
     public GuiSignalInstance(string objectName)
     {
-        _objectName=objectName;
+        _objectName = objectName;
+        CoreState = new GuiSignalState(objectName);
+        PropertyChanged += (sender, info) =>
+        {
+            if((info.PropertyName ?? "").Contains("Name"))
+                CoreState.ObjectName=ObjectName;
+        };
     }
 
     public void LoadFromDB(SignalStorage signalStorage)
     {
-        var s = signalStorage.db.Table<SessionModel>().FirstOrDefault(v=>v.Name== ObjectName);
-        if(s is null)
-            throw new KeyNotFoundException($"Cannot find database signal instance with name {ObjectName}");
-        
-        s = signalStorage.db.GetWithChildren<SessionModel>(s.Id);
-        var sFields = signalStorage.GetSessionState(s.Id);
-        // s.Signal.GetNdarray
-        var computedSignal = new ComputedSignal(
-            s.SignalX.GetNdarray(),
-            s.SignalY.GetNdarray(),
-            s.SignalStatistics.Select(v=>(v.Statistic,v.Name)).ToArray()
-        );
-        var filters = sFields.Filters.Select(v=>(
-            visible: v.Enabled,
-            name:v.VarName,
-            factory:v.Filter.Factory
-        ));
-        var transforms = sFields.Transforms.Select(v=>(
-            visible: v.Enabled,
-            name:v.VarName,
-            factory:v.Transform.Factory
-        ));
-
-        var generations = sFields.Generations.Select(v=>(
-            name:v.VarName,
-            factory:v.Generation.Factory
-        ));
-
-        var norms = sFields.Normalizations.Select(v=>(
-            visible: v.Enabled,
-            name:v.VarName,
-            factory:v.Normalization.Factory
-        ));
-
-        var ops = 
-            new[]{filters,transforms,norms}
-            .SelectMany(v=>v)
-            .OrderBy(v=>v.name)
-            .Select(v=>(v.visible,v.factory))
-            .ToArray() ?? throw new Exception();
-
-        ObjectName=s.Name;
-        ComputedSignal=computedSignal;
-        Expression=s.Expression;
-        Filters=ops;
-        SignalParams = new ObjectFactory(
-            typeof(SignalParameters),
-            args: [
-                ("computePoints",s.ComputePoints),
-                ("renderPoints",256)
-            ]
-        );
-        SignalStatistics=s.SignalStatistics.Select(v=>(v.Name,v.Statistic)).ToArray();
-        Sources=generations.Select(v=>v.factory).ToArray();
+        var loadedState = GuiStateConverter.LoadFromDB(signalStorage, ObjectName);
+        CoreState = loadedState;
+        ObjectName = loadedState.ObjectName;
+        //  = loadedState.SignalParams;
     }
+
     public SessionStateModel ToSessionStateModel()
     {
-        // Create the main session model
-        var sessionModel = new SessionModel
-        {
-            Name = ObjectName,
-            Expression = Expression,
-            ComputePoints = SignalParams?.ConstructorArguments.ContainsKey("computePoints") ?? false
-                ? Convert.ToInt32(SignalParams?.ConstructorArguments["computePoints"].Instance ?? 1024)
-                : 1024,
-            SignalX = new NDarrayBinaryDataModel(),
-            SignalY = new NDarrayBinaryDataModel(),
-            SignalStatistics = SignalStatistics?.Select(v => new SignalStatistic { Name = v.name, Statistic = v.stat }).ToList() ?? []
-        };
-
-        sessionModel.SignalX.SetNdarray(0.ToNdarray());
-        sessionModel.SignalY.SetNdarray(0.ToNdarray());
-
-        // Set signal data if ComputedSignal is available
-        if (ComputedSignal != null && ComputedSignal.X != null && ComputedSignal.Y != null)
-        {
-            var xArray = np.array(ComputedSignal.X, np.Float32);
-            // For complex signals, we need to handle the YImag part
-            ndarray yArray;
-            if (ComputedSignal.YImag != null)
-            {
-                // Create complex array from real and imaginary parts
-                var complexValues = new System.Numerics.Complex[ComputedSignal.Y.Length];
-                for (int i = 0; i < ComputedSignal.Y.Length; i++)
-                {
-                    complexValues[i] = new System.Numerics.Complex(ComputedSignal.Y[i], ComputedSignal.YImag[i]);
-                }
-                yArray = np.array(complexValues, np.Complex);
-            }
-            else
-            {
-                yArray = np.array(ComputedSignal.Y, np.Float32);
-            }
-
-            sessionModel.SignalX.SetNdarray(xArray);
-            sessionModel.SignalY.SetNdarray(yArray);
-        }
-        var imd = this.ComputedSignal?.ImageData;
-        if(imd is not null)
-            sessionModel.SignalY.SetNdarray(imd);
-
-        // Create relation models for generations (sources)
-        var generations = Sources?.Select((factory, index) => new SessionGenerators
-        {
-            Session=sessionModel,
-            VarName = $"source_{index}",
-            Generation = new GenerationModel
-            {
-                Factory = factory
-            }
-        }).ToArray() ?? Array.Empty<SessionGenerators>();
-
-        // Separate the mixed operations (filters, transforms, normalizations) from the Filters property
-        var allOperations = 
-            Filters?.Select((v,ind)=>(op:v,ind:ind))
-            ?? [];
-
-        var extractedFilters = allOperations
-        .Where(v=>IsFilterOperation(v.op))
-        .Select(opWithInd => new SessionFilters
-        {
-            Session=sessionModel,
-            VarName = $"operation_{opWithInd.ind}",
-            Enabled = opWithInd.op.visible,
-            Filter = new FilterModel
-            {
-                Factory = opWithInd.op.factory
-            }
-        }).ToArray();
-
-        var extractedTransforms = allOperations.Where(v=>IsTransformOperation(v.op)).Select(v => new SessionTransforms
-        {
-            Session=sessionModel,
-            VarName = $"operation_{v.ind}",
-            Enabled = v.op.visible,
-            Transform = new TransformModel
-            {
-                Factory = v.op.factory
-            }
-        }).ToArray();
-
-        var extractedNorms = allOperations.Where(v=>IsNormalizationOperation(v.op))
-        .Select(v => new SessionNormalization
-        {
-            Session=sessionModel,
-            VarName = $"operation_{v.ind}",
-            Enabled = v.op.visible,
-            Normalization = new NormalizationModel
-            {
-                Factory = v.op.factory
-            }
-        }).ToArray();
-
-        return new SessionStateModel(
-            sessionModel,
-            generations,
-            extractedFilters,
-            extractedTransforms,
-            extractedNorms
+        var stateForConversion = new GuiSignalState(
+            ObjectName,
+            CoreState.ComputedSignal,
+            CoreState.SignalStatistics,
+            CoreState.CompletedPercent,
+            CoreState.Sources,
+            CoreState.Expression,
+            CoreState.Filters,
+            CoreState.SignalParams
         );
-    }
 
-    // Helper methods to determine the type of operation
-    private bool IsFilterOperation((bool visible, ObjectFactory factory) op)
-    {
-        // Check if the factory's object type is related to filtering
-        // This could be based on interface implementation or naming convention
-        return op.factory.Type.Name.ToLower().Contains("filter");
+        return GuiStateConverter.ToSessionStateModel(stateForConversion);
     }
-
-    private bool IsTransformOperation((bool visible, ObjectFactory factory) op)
-    {
-        // Check if the factory's object type is related to transformation
-        return op.factory.Type.Name.ToLower().Contains("transform");
-    }
-
-    private bool IsNormalizationOperation((bool visible, ObjectFactory factory) op)
-    {
-        // Check if the factory's object type is related to normalization
-        return op.factory.Type.Name.ToLower().Contains("normalize");
-    }
-
-    public ComputedSignal? ComputedSignal=null;
-    public (string name, float stat)[]? SignalStatistics;
-    public int CompletedPercent=0;
-    public IEnumerable<ObjectFactory> Sources=[];
-    public string Expression="";
-    public IEnumerable<(bool visible, ObjectFactory factory)> Filters=[];
-    public ObjectFactory? SignalParams=null;
+   
 }
 public partial class CompositeComponentViewModel : ViewModelBase
 {
     public void LoadSessionsFromDB()
     {
-
         var newSet = SessionStorage.db
         .Table<SessionModel>()
-        .Select(v=>
-            new GuiSignalInstance(v.Name))
+        .Select(v=> new GuiSignalInstance(v.Name))
         .ToArray();
         SavedGuiInstances.Clear();
         SavedGuiInstances.AddRange(newSet);
@@ -243,23 +84,18 @@ public partial class CompositeComponentViewModel : ViewModelBase
     /// </summary>
     public GuiSignalInstance CreateGuiInstanceSnapshot()
     {
-        return new(ObjectName)
-        {
-            ComputedSignal = _computedSignal?.Clone(),
-            SignalStatistics =
-                SignalStatistics?
-                .Select(v=>(v.Name,v.Stat))
-                .ToArray(),
-            ObjectName = ObjectName,
-            CompletedPercent = CompletedPercent,
-            Expression = Expression,
-            Sources =
-                Sources.Select(v=>v.Factory.Clone()).ToArray(),
-            Filters =
-                Filters
-                .Select(v=>(v.Enabled,v.Factory.Clone())).ToArray(),
-            SignalParams = SignalParams?.Clone(),
-        };
+        var snapshot = new GuiSignalInstance(ObjectName);
+        snapshot.CoreState = new GuiSignalState(
+            ObjectName,
+            _computedSignal?.Clone(),
+            SignalStatistics?.Select(v => (v.Name, v.Stat)).ToArray(),
+            CompletedPercent,
+            Sources.Select(v => v.Factory.Clone()).ToArray(),
+            Expression,
+            Filters.Select(v => (v.Enabled, v.Factory.Clone())).ToArray(),
+            SignalParams?.Clone()
+        );
+        return snapshot;
     }
 
     /// <summary>
@@ -281,8 +117,8 @@ public partial class CompositeComponentViewModel : ViewModelBase
 
             //Save current state to DB
             var state = instance.ToSessionStateModel();
-            SessionStorage.AddSessionState(state);
             
+            SessionStorage.AddSessionState(state);
             //Reload all sessions from DB
             LoadSessionsFromDB();
         }
@@ -300,23 +136,26 @@ public partial class CompositeComponentViewModel : ViewModelBase
     {
         this.RenderedImage = null;
         instance.LoadFromDB(SessionStorage);
-        _computedSignal = instance.ComputedSignal;
+        
+        var state = instance.CoreState;
 
-        var stats = instance.SignalStatistics?.Select(v=> new SignalStatisticViewModel(v.name,v.stat)).ToArray();
+        _computedSignal = state.ComputedSignal;
+
+        var stats = state.SignalStatistics?.Select(v=> new SignalStatisticViewModel(v.name,v.stat)).ToArray();
         if(stats is not null)
             SignalStatistics = stats;
         ObjectName = instance.ObjectName;
-        CompletedPercent = instance.CompletedPercent;
-        Expression = instance.Expression;
-        
+        CompletedPercent = state.CompletedPercent;
+        Expression = state.Expression;
+
         Sources.Clear();
-        Sources.AddRange(instance.Sources.Select(v=>new SourceItemViewModel
+        Sources.AddRange(state.Sources.Select(v=>new SourceItemViewModel
         {
             Factory=v
         }));
 
         Filters.Clear();
-        Filters.AddRange(instance.Filters.Select(v=>new FilterItemViewModel
+        Filters.AddRange(state.Filters.Select(v=>new FilterItemViewModel
         {
             Enabled=v.visible,
             Factory=v.factory
@@ -324,7 +163,11 @@ public partial class CompositeComponentViewModel : ViewModelBase
         ReassignSourceLetters();
         CurrentParameters = new();
 
-        SignalParams = instance.SignalParams;
+        SignalParams = state.SignalParams;
+
+        System.Console.WriteLine("SIGNAL PARAMS");
+        System.Console.WriteLine(state.SignalParams?.ToJson());
+
         Series.Clear();
         PlotLine();
         Plot2DImage();
@@ -360,6 +203,7 @@ public partial class CompositeComponentViewModel : ViewModelBase
             var dbSessionInstance = SessionStorage.db.Table<SessionModel>().FirstOrDefault(v=>v.Name==instance.ObjectName);
             if(dbSessionInstance is not null)
             {
+                System.Console.WriteLine("Removing instance with name",dbSessionInstance.Name);
                 SessionStorage.DeleteSession(dbSessionInstance.Id);
             }
             LoadSessionsFromDB();
