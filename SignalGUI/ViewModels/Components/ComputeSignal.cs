@@ -76,6 +76,8 @@ public partial class CompositeComponentViewModel
             {
                 SignalStatistics = result.Stats?.Select(v=> new SignalStatisticViewModel(v.name,v.stat)).ToArray();
             });
+            _computedSignal = result;
+
             // Automatically plot as a line chart after computation is done
             // Need to dispatch to UI thread since this event is called from background thread
             Dispatcher.UIThread.Post(PlotLine);
@@ -83,7 +85,6 @@ public partial class CompositeComponentViewModel
         };
 
         computeSignal.Run();
-        _computedSignal=computeSignal.ComputedSignal;
         _runningComputation=computeSignal;
     }
 
@@ -103,13 +104,13 @@ public partial class CompositeComponentViewModel
                 .Where(v => v.Factory is not null)
                 .Select(v => new { 
                     letter = v.Letter, 
-                    instance = v.Factory?.GetInstance() })
+                    instance = v.Factory?.CreateInstance() })
                 .Where(s => s.instance is not null)
                 .ToList();
 
             var signalEdit = Filters
                 .Where(v => v.Factory is not null && v.Enabled)
-                .Select(v => v.Factory?.GetInstance())
+                .Select(v => v.Factory?.CreateInstance())
                 .Where(s => s != null)
                 .ToList();
 

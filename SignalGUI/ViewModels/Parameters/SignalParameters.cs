@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SignalCore;
+using SignalCore.Storage;
 using SignalGUI.Utils;
 
 namespace SignalGUI.ViewModels;
@@ -19,12 +20,12 @@ public class SignalParameters
         RenderPoints=renderPoints;
     }
 
-    public static GuiObjectFactory CreateFactory()
+    public static ObjectFactory CreateFactory()
     {
         var ctor = 
             typeof(SignalParameters)
             .GetSupportedConstructor(ArgumentsTypesUtils.SupportedTypes)?
             .ToDictionary(v=>v.Key,v=>v.Value);
-        return new GuiObjectFactory(typeof(SignalParameters),ctor ?? throw new Exception(),null);
+        return new ObjectFactory(typeof(SignalParameters),ctor ?? throw new Exception());
     }
 }

@@ -331,16 +331,331 @@ public class ObjectFactoryTests
             { "doubleValue", 1.23 }
         };
         var originalFactory = new ObjectFactory(typeof(TestClassWithMultipleConstructors), args);
-        
+
         var json = originalFactory.ToJson();
         var restoredFactory = ObjectFactory.FromJson(json);
-        
+
         // Verify types are maintained after round trip
         Assert.Equal(originalFactory.ConstructorArguments.Count, restoredFactory.ConstructorArguments.Count);
-        
+
         var instance = restoredFactory.CreateInstance<TestClassWithMultipleConstructors>();
         Assert.Equal(100, instance.IntValue);
         Assert.Equal("test", instance.StringValue);
         Assert.Equal(1.23, instance.DoubleValue);
+    }
+
+    [Fact]
+    public void TestValidateInstanceArgumentsType_ThrowsOnIncompatibleTypes()
+    {
+        // Create the ObjectFactory and manually set an incompatible type
+        var factory = new ObjectFactory(typeof(TestClassWithIntConstructor), new Dictionary<string, object>());
+        factory.ConstructorArguments["value"] = new ObjectFactory.Argument
+        {
+            Instance = "not_an_int",
+            TypeFullName = typeof(int).AssemblyQualifiedName!
+        };
+
+        // The validation happens inside CreateInstance, so we expect an exception
+        var exception = Assert.Throws<ArgumentException>(() => factory.CreateInstance<TestClassWithIntConstructor>());
+        Assert.Contains("Cannot use", exception.Message);
+    }
+
+    [Fact]
+    public void TestValidateInstanceArgumentsType_AllowsCompatibleConversions()
+    {
+        // Test int to float conversion which should work
+        var args = new Dictionary<string, object> { { "value", 42 } }; // int value for float constructor
+        var factory = new ObjectFactory(typeof(TestClassWithFloatConstructor), args);
+
+        var instance = factory.CreateInstance<TestClassWithFloatConstructor>();
+
+        Assert.NotNull(instance);
+        Assert.Equal(42.0f, instance.Value);
+    }
+
+    [Fact]
+    public void TestValidateInstanceArgumentsType_WithNullValue_ThrowsException()
+    {
+        // Create the ObjectFactory with a properly constructed Argument that has a null instance
+        var factory = new ObjectFactory(typeof(TestClassWithIntConstructor), new Dictionary<string, object>());
+        // Manually set an argument with null value to trigger the validation
+        factory.ConstructorArguments.Add("value", new ObjectFactory.Argument { Instance = null, TypeFullName = typeof(int).AssemblyQualifiedName! });
+
+        var exception = Assert.Throws<ArgumentException>(() => factory.CreateInstance<TestClassWithIntConstructor>());
+        Assert.Contains("Cannot use", exception.Message);
+    }
+
+    [Fact]
+    public void TestValidateInstanceArgumentsType_WithJsonElement_Int()
+    {
+        // Create a JSON element representing an integer
+        using var document = JsonDocument.Parse("{\"value\": 42}");
+        var jsonElement = document.RootElement.GetProperty("value");
+
+        // Create the ObjectFactory manually to control the type
+        var factory = new ObjectFactory(typeof(TestClassWithIntConstructor), new Dictionary<string, object>());
+        factory.ConstructorArguments["value"] = new ObjectFactory.Argument
+        {
+            Instance = jsonElement,
+            TypeFullName = typeof(int).AssemblyQualifiedName!
+        };
+
+        var instance = factory.CreateInstance<TestClassWithIntConstructor>();
+        Assert.Equal(42, instance.Value);
+    }
+
+    [Fact]
+    public void TestValidateInstanceArgumentsType_WithJsonElement_String()
+    {
+        // Create a JSON element representing a string
+        using var document = JsonDocument.Parse("{\"value\": \"Hello\"}");
+        var jsonElement = document.RootElement.GetProperty("value");
+
+        // Create the ObjectFactory manually to control the type
+        var factory = new ObjectFactory(typeof(TestClassWithStringConstructor), new Dictionary<string, object>());
+        factory.ConstructorArguments["value"] = new ObjectFactory.Argument
+        {
+            Instance = jsonElement,
+            TypeFullName = typeof(string).AssemblyQualifiedName!
+        };
+
+        var instance = factory.CreateInstance<TestClassWithStringConstructor>();
+        Assert.Equal("Hello", instance.Value);
+    }
+
+    [Fact]
+    public void TestValidateInstanceArgumentsType_WithJsonElement_Float()
+    {
+        // Create a JSON element representing a float
+        using var document = JsonDocument.Parse("{\"value\": 3.14}");
+        var jsonElement = document.RootElement.GetProperty("value");
+
+        // Create the ObjectFactory manually to control the type
+        var factory = new ObjectFactory(typeof(TestClassWithFloatConstructor), new Dictionary<string, object>());
+        factory.ConstructorArguments["value"] = new ObjectFactory.Argument
+        {
+            Instance = jsonElement,
+            TypeFullName = typeof(float).AssemblyQualifiedName!
+        };
+
+        var instance = factory.CreateInstance<TestClassWithFloatConstructor>();
+        Assert.Equal(3.14f, instance.Value);
+    }
+
+    [Fact]
+    public void TestSimpleConversions_IntToFloat()
+    {
+        // Test int to float conversion
+        var args = new Dictionary<string, object> { { "value", 42 } }; // int value for float constructor
+        var factory = new ObjectFactory(typeof(TestClassWithFloatConstructor), args);
+
+        var instance = factory.CreateInstance<TestClassWithFloatConstructor>();
+        Assert.Equal(42.0f, instance.Value);
+    }
+
+    [Fact]
+    public void TestSimpleConversions_StringToDouble()
+    {
+        // Test int to double conversion
+        var args = new Dictionary<string, object> { { "value", "42" } }; // stringified int value for double constructor
+        var factory = new ObjectFactory(typeof(TestClassWithMultipleConstructors), args);
+
+        var exception = Assert.Throws<InvalidOperationException>(() => factory.CreateInstance<TestClassWithMultipleConstructors>());
+        // This should fail because we're passing only one int argument to a constructor expecting 3 args
+        Assert.Contains("No matching constructor found", exception.Message);
+
+        // Let's test with the right constructor
+        var args2 = new Dictionary<string, object>
+        {
+            { "intValue", 42 },
+            { "stringValue", "test" },
+            { "doubleValue", 3.14 }
+        };
+        var factory2 = new ObjectFactory(typeof(TestClassWithMultipleConstructors), args2);
+        var instance = factory2.CreateInstance<TestClassWithMultipleConstructors>();
+        Assert.Equal(42, instance.IntValue);
+    }
+
+    [Fact]
+    public void TestSimpleConversions_LongToInt()
+    {
+        // Test long to int conversion - create ObjectFactory manually to control types
+        var factory = new ObjectFactory(typeof(TestClassWithIntConstructor), new Dictionary<string, object>());
+        factory.ConstructorArguments["value"] = new ObjectFactory.Argument
+        {
+            Instance = 100L,
+            TypeFullName = typeof(int).AssemblyQualifiedName!
+        };
+
+        var instance = factory.CreateInstance<TestClassWithIntConstructor>();
+        Assert.Equal(100, instance.Value);
+    }
+
+    [Fact]
+    public void TestSimpleConversions_DoubleToFloat()
+    {
+        // Test double to float conversion - create ObjectFactory manually to control types
+        var factory = new ObjectFactory(typeof(TestClassWithFloatConstructor), new Dictionary<string, object>());
+        factory.ConstructorArguments["value"] = new ObjectFactory.Argument
+        {
+            Instance = 3.14,
+            TypeFullName = typeof(float).AssemblyQualifiedName!
+        };
+
+        var instance = factory.CreateInstance<TestClassWithFloatConstructor>();
+        Assert.Equal(3.14f, instance.Value);
+    }
+
+    [Fact]
+    public void TestClone_CreatesIdenticalObject()
+    {
+        var args = new Dictionary<string, object>
+        {
+            { "value", 42 }
+        };
+        var originalFactory = new ObjectFactory(typeof(TestClassWithIntConstructor), args);
+
+        var clonedFactory = originalFactory.Clone();
+
+        // Verify the cloned factory has the same type
+        Assert.Equal(originalFactory.TypeFullName, clonedFactory.TypeFullName);
+
+        // Verify the cloned factory has the same number of constructor arguments
+        Assert.Equal(originalFactory.ConstructorArguments.Count, clonedFactory.ConstructorArguments.Count);
+
+        // Verify each argument has the same type and value
+        foreach (var key in originalFactory.ConstructorArguments.Keys)
+        {
+            Assert.True(clonedFactory.ConstructorArguments.ContainsKey(key));
+            Assert.Equal(originalFactory.ConstructorArguments[key].TypeFullName, clonedFactory.ConstructorArguments[key].TypeFullName);
+            Assert.Equal(originalFactory.ConstructorArguments[key].Instance, clonedFactory.ConstructorArguments[key].Instance);
+        }
+    }
+
+    [Fact]
+    public void TestClone_InstancesAreDifferentObjects_ReferenceTypes()
+    {
+        // Create a test class that contains a reference type
+        var innerObject = new TestClassWithIntConstructor(100);
+        var args = new Dictionary<string, object>
+        {
+            { "innerObject", innerObject },
+            { "name", "Test" }
+        };
+        var originalFactory = new ObjectFactory(typeof(TestClassWithComplexType), args);
+
+        var clonedFactory = originalFactory.Clone();
+
+        // Get the instances from both factories
+        var originalInnerObject = ((TestClassWithComplexType)originalFactory.CreateInstance()).InnerObject;
+        var clonedInnerObject = ((TestClassWithComplexType)clonedFactory.CreateInstance()).InnerObject;
+
+        // The values should be equal
+        Assert.Equal(originalInnerObject.Value, clonedInnerObject.Value);
+
+        // But they should be different objects (deep copy)
+        Assert.NotSame(originalInnerObject, clonedInnerObject);
+    }
+
+    [Fact]
+    public void TestClone_InstancesAreDifferentObjects_ValueTypes()
+    {
+        var args = new Dictionary<string, object>
+        {
+            { "value", 42 }
+        };
+        var originalFactory = new ObjectFactory(typeof(TestClassWithIntConstructor), args);
+
+        var clonedFactory = originalFactory.Clone();
+
+        // For value types, the values should be equal
+        var originalInstance = originalFactory.CreateInstance<TestClassWithIntConstructor>();
+        var clonedInstance = clonedFactory.CreateInstance<TestClassWithIntConstructor>();
+
+        Assert.Equal(originalInstance.Value, clonedInstance.Value);
+    }
+
+    [Fact]
+    public void TestClone_MultipleArguments()
+    {
+        var args = new Dictionary<string, object>
+        {
+            { "intValue", 100 },
+            { "stringValue", "Test String" },
+            { "doubleValue", 3.14 }
+        };
+        var originalFactory = new ObjectFactory(typeof(TestClassWithMultipleConstructors), args);
+
+        var clonedFactory = originalFactory.Clone();
+
+        // Verify the cloned factory has the same properties
+        Assert.Equal(originalFactory.TypeFullName, clonedFactory.TypeFullName);
+        Assert.Equal(originalFactory.ConstructorArguments.Count, clonedFactory.ConstructorArguments.Count);
+
+        // Verify each argument matches
+        foreach (var key in originalFactory.ConstructorArguments.Keys)
+        {
+            Assert.True(clonedFactory.ConstructorArguments.ContainsKey(key));
+            Assert.Equal(originalFactory.ConstructorArguments[key].TypeFullName, clonedFactory.ConstructorArguments[key].TypeFullName);
+            Assert.Equal(originalFactory.ConstructorArguments[key].Instance, clonedFactory.ConstructorArguments[key].Instance);
+        }
+
+        // Verify both factories create equivalent instances
+        var originalInstance = originalFactory.CreateInstance<TestClassWithMultipleConstructors>();
+        var clonedInstance = clonedFactory.CreateInstance<TestClassWithMultipleConstructors>();
+
+        Assert.Equal(originalInstance.IntValue, clonedInstance.IntValue);
+        Assert.Equal(originalInstance.StringValue, clonedInstance.StringValue);
+        Assert.Equal(originalInstance.DoubleValue, clonedInstance.DoubleValue);
+    }
+
+    [Fact]
+    public void TestClone_ModificationDoesNotAffectOriginal()
+    {
+        var args = new Dictionary<string, object>
+        {
+            { "value", 42 }
+        };
+        var originalFactory = new ObjectFactory(typeof(TestClassWithIntConstructor), args);
+
+        var clonedFactory = originalFactory.Clone();
+
+        // Modify the cloned factory's argument
+        var newArgs = new Dictionary<string, object>
+        {
+            { "value", 99 }
+        };
+        clonedFactory.ConstructorArguments.Clear();
+        clonedFactory.ConstructorArguments = new ObjectFactory(typeof(TestClassWithIntConstructor), newArgs).ConstructorArguments;
+
+        // Create instances from both factories
+        var originalInstance = originalFactory.CreateInstance<TestClassWithIntConstructor>();
+        var clonedInstance = clonedFactory.CreateInstance<TestClassWithIntConstructor>();
+
+        // They should have different values
+        Assert.Equal(42, originalInstance.Value);
+        Assert.Equal(99, clonedInstance.Value);
+    }
+
+    [Fact]
+    public void TestClone_ICloneableInterface()
+    {
+        var args = new Dictionary<string, object>
+        {
+            { "value", 42 }
+        };
+        var originalFactory = new ObjectFactory(typeof(TestClassWithIntConstructor), args);
+
+        // Use the ICloneable interface
+        var clonedFactory = (ObjectFactory)((ICloneable)originalFactory).Clone();
+
+        // Verify the clone is identical
+        Assert.Equal(originalFactory.TypeFullName, clonedFactory.TypeFullName);
+        Assert.Equal(originalFactory.ConstructorArguments.Count, clonedFactory.ConstructorArguments.Count);
+
+        var originalInstance = originalFactory.CreateInstance<TestClassWithIntConstructor>();
+        var clonedInstance = clonedFactory.CreateInstance<TestClassWithIntConstructor>();
+
+        Assert.Equal(originalInstance.Value, clonedInstance.Value);
     }
 }

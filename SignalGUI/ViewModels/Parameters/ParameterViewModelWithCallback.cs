@@ -1,6 +1,7 @@
 using System;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using SignalCore;
 using SignalGUI.Utils;
 
 namespace SignalGUI.ViewModels;

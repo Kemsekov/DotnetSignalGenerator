@@ -18,26 +18,26 @@ namespace SignalGUI.ViewModels;
 
 public partial class CompositeComponentViewModel : ViewModelBase
 {
-    static List<GuiObjectFactory> _GetImplementationFactories(params Type[] t)
+    static List<ObjectFactory> _GetImplementationFactories(params Type[] t)
     {
         return t.SelectMany(v=>v.GetAllImplementations())
         .Select(type=>
             new{type, ctor=type.GetSupportedConstructor(ArgumentsTypesUtils.SupportedTypes)}
         )
         .Where(v=>v.ctor is not null)
-        .Select(v=>new GuiObjectFactory(v.type,v.ctor ?? throw new Exception()))
+        .Select(v=>new ObjectFactory(v.type,v.ctor ?? throw new Exception()))
         .ToList();
     }
 
     public List<ISignalStatistic> AvailableSignalStatistics { get; set; }
         = _GetImplementationFactories(typeof(ISignalStatistic))
-        .Select(v=>(ISignalStatistic)v.GetInstance())
+        .Select(v=>(ISignalStatistic)v.CreateInstance())
         .ToList();
     
-    public List<GuiObjectFactory> AvailableSourceTypes { get; set; }
+    public List<ObjectFactory> AvailableSourceTypes { get; set; }
         = _GetImplementationFactories(typeof(ISignalGenerator));
 
-    public List<GuiObjectFactory> AvailableFilterTypes { get; set; }
+    public List<ObjectFactory> AvailableFilterTypes { get; set; }
         = _GetImplementationFactories(typeof(IFilter),typeof(INormalization),typeof(ITransform));
 
     [ObservableProperty]
@@ -67,9 +67,9 @@ public partial class CompositeComponentViewModel : ViewModelBase
     public ObservableCollection<FilterItemViewModel> Filters { get; set; } = new();
     public List<string> AvailableSourcesForExpression => Sources.Select(s => s.Letter).ToList();
     [ObservableProperty]
-    GuiObjectFactory? _signalParams = SignalParameters.CreateFactory();
+    ObjectFactory? _signalParams = SignalParameters.CreateFactory();
 
-    public SignalParameters SignalParameters => SignalParams?.GetInstance() as SignalParameters ?? 
+    public SignalParameters SignalParameters => SignalParams?.CreateInstance() as SignalParameters ?? 
                 throw new ArgumentException("Failed to cast SignalParameters");
     // Chart properties
     [ObservableProperty]

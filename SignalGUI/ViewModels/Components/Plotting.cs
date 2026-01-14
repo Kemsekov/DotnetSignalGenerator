@@ -14,11 +14,15 @@ public partial class CompositeComponentViewModel
     [RelayCommand]
     void PlotLine()
     {
+        System.Console.WriteLine("HERE");
+        System.Console.WriteLine(_computedSignal);
         var _xValues = _computedSignal?.X;
         var _yValues = _computedSignal?.Y;
         var _yImagValues = _computedSignal?.YImag;
+
         if (_xValues != null && _yValues != null)
         {
+            System.Console.WriteLine("THERE");
             var x = np.array(_xValues,copy:false).resample([SignalParameters.RenderPoints]);
             var y = np.array(_yValues,copy:false).resample([SignalParameters.RenderPoints]);
 

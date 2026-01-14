@@ -31,9 +31,35 @@ public class SignalStorage : IDisposable
     {
         // Establish connection
         db = new SQLiteConnection(dbPath);
+        CreateAllTables();
+    }
+    public void CreateAllTables()
+    {
         // create tables for each type
         foreach(var m in DataModel.FindModels())
             db.CreateTable(m);
+    }
+    public void AddSessionState(SessionStateModel m)
+    {
+        // if we encounter object with same name just replace it
+        try
+        {m.Session.Id=db.Find<SessionModel>(v=>v.Name==m.Session.Name).Id;}
+        catch{}
+
+        db.InsertOrReplaceWithChildren(m.Session.SignalX);
+        db.InsertOrReplaceWithChildren(m.Session.SignalY);
+        
+        db.InsertOrReplaceAllWithChildren(m.Transforms.Select(v=>v.Transform),recursive:true);
+        db.InsertOrReplaceAllWithChildren(m.Normalizations.Select(v=>v.Normalization),recursive:true);
+        db.InsertOrReplaceAllWithChildren(m.Filters.Select(v=>v.Filter),recursive:true);
+        db.InsertOrReplaceAllWithChildren(m.Generations.Select(v=>v.Generation),recursive:true);
+
+        db.InsertOrReplaceWithChildren(m.Session,recursive:true);
+
+        db.InsertOrReplaceAllWithChildren(m.Transforms,recursive:true);
+        db.InsertOrReplaceAllWithChildren(m.Normalizations,recursive:true);
+        db.InsertOrReplaceAllWithChildren(m.Filters,recursive:true);
+        db.InsertOrReplaceAllWithChildren(m.Generations,recursive:true);
     }
     /// <summary>
     /// Fetch full session state from Db
@@ -45,19 +71,60 @@ public class SignalStorage : IDisposable
         {
             throw new ArgumentException($"Session with Id={sessionId} not found");
         }
-        var generations = db.GetAllWithChildren<SessionGenerators>(v=>v.SessionId==sessionId).ToArray();
-        var filters =  db.GetAllWithChildren<SessionFilters>(v=>v.SessionId==sessionId).ToArray();
-        var transforms =  db.GetAllWithChildren<SessionTransforms>(v=>v.SessionId==sessionId).ToArray();
-        var normalizations =  db.GetAllWithChildren<SessionNormalization>(v=>v.SessionId==sessionId).ToArray();
-        var signalInstances =  db.GetAllWithChildren<SessionSignalInstance>(v=>v.SessionId==sessionId).ToArray();
+        System.Console.WriteLine($"SessionId {sessionId}");
+        var generations = db
+            .GetAllWithChildren<SessionGenerators>(v=>v.SessionId==sessionId,recursive:true)
+            .ToArray();
+        System.Console.WriteLine($"generations {generations.Length}");
+        var filters =  db
+            .GetAllWithChildren<SessionFilters>(v=>v.SessionId==sessionId,recursive:true)
+            .ToArray();
+        var transforms =  db
+            .GetAllWithChildren<SessionTransforms>(v=>v.SessionId==sessionId,recursive:true)
+            .ToArray();
+        var normalizations =  db
+            .GetAllWithChildren<SessionNormalization>(v=>v.SessionId==sessionId,recursive:true)
+            .ToArray();
         return new(
             session,
             generations,
             filters,
             transforms,
-            normalizations,
-            signalInstances
+            normalizations
         );
+    }
+
+    /// <summary>
+    /// Delete a session and all related objects to properly handle cascade deletion
+    /// </summary>
+    public void DeleteSession(long id)
+    {
+        // First get the session state to identify all related objects
+        var sessionState = GetSessionState(id);
+
+        // Delete in reverse order of creation/relation to avoid foreign key constraint violations
+
+        // Delete generator, filter, transform, and normalization relationship objects first
+        db.DeleteAll(sessionState.Filters);
+        db.DeleteAll(sessionState.Generations);
+        db.DeleteAll(sessionState.Transforms);
+        db.DeleteAll(sessionState.Normalizations);
+
+        db.DeleteAll(sessionState.Filters.Select(v=>v.Filter));
+        db.DeleteAll(sessionState.Generations.Select(v=>v.Generation));
+        db.DeleteAll(sessionState.Transforms.Select(v=>v.Transform));
+        db.DeleteAll(sessionState.Normalizations.Select(v=>v.Normalization));
+      
+        var session = sessionState.Session;
+        if (session is not null)
+        {
+            // Delete associated signals if they exist
+            db.Delete<NDarrayBinaryDataModel>(session.SignalXId);
+            db.Delete<NDarrayBinaryDataModel>(session.SignalYId);
+
+            // Finally delete the session
+            db.Delete<SessionModel>(id);
+        }
     }
 
     public void Dispose()

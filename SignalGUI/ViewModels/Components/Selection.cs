@@ -35,22 +35,24 @@ public partial class CompositeComponentViewModel
         CurrentParameters.Clear();
         if (SelectedSource?.Factory != null)
         {
-            foreach (var param in SelectedSource.Factory.Arguments)
+            var args = SelectedSource.Factory.ConstructorArguments;
+            foreach (var param in args)
             {
-                var value = SelectedSource.Factory.InstanceArguments[param.Key];
-                var paramVM = new ParameterViewModelWithCallback(param.Key, param.Value, value, (newValue) => {
-                    SelectedSource.Factory.InstanceArguments[param.Key] = newValue;
+                var value = args[param.Key];
+                var paramVM = new ParameterViewModelWithCallback(param.Key, param.Value.Type, value.Instance ?? "", (newValue) => {
+                    args[param.Key].Instance = newValue;
                 });
                 CurrentParameters.Add(paramVM);
             }
         }
         else if (SelectedFilter?.Factory != null)
         {
-            foreach (var param in SelectedFilter.Factory.Arguments)
+            var args = SelectedFilter.Factory.ConstructorArguments;
+            foreach (var param in args)
             {
-                var value = SelectedFilter.Factory.InstanceArguments[param.Key];
-                var paramVM = new ParameterViewModelWithCallback(param.Key, param.Value, value, (newValue) => {
-                    SelectedFilter.Factory.InstanceArguments[param.Key] = newValue;
+                var value = args[param.Key];
+                var paramVM = new ParameterViewModelWithCallback(param.Key, param.Value.Type, value.Instance ?? "", (newValue) => {
+                    args[param.Key].Instance = newValue;
                 });
                 CurrentParameters.Add(paramVM);
             }
@@ -64,11 +66,12 @@ public partial class CompositeComponentViewModel
 
         if (SignalParams != null)
         {
-            foreach (var param in SignalParams.Arguments)
+            var args = SignalParams.ConstructorArguments;
+            foreach (var param in SignalParams.ConstructorArguments)
             {
-                var value = SignalParams.InstanceArguments[param.Key];
-                var paramVM = new ParameterViewModelWithCallback(param.Key, param.Value, value, (newValue) => {
-                    SignalParams.InstanceArguments[param.Key] = newValue;
+                var value = args[param.Key];
+                var paramVM = new ParameterViewModelWithCallback(param.Key, param.Value.Type, value.Instance ?? "", (newValue) => {
+                    args[param.Key].Instance = newValue;
                 });
                 CurrentParameters.Add(paramVM);
             }

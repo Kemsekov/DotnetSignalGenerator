@@ -1,17 +1,71 @@
-//TODO: add tests for this file, create test with several generators,
-// with valid/invalid expression
-// with several ISignalOperation's, including transforms
-// check that FWT transform produces ImageData field
-// and test several statistics.
-// And make sure all events are called in proper cases
-// on exceptions, cancellations, computation completions, computation steps
-// make sure Run/Cancel commands works
-// to understand better how this class works, read Lazy.cs file and
-// LazyTests.cs file
-
 using SignalCore.Computation;
 
 namespace SignalCore;
+
+/// <summary>
+/// Computed signal instance, this class contains only data data fields
+/// </summary>
+public class ComputedSignal : ICloneable
+{
+    // Properties to hold 1d signal data
+    public float[]? X{get;set;}
+    public float[]? Y{get;set;}
+    public float[]? YImag{get;set;}
+    // Properties to hold 2D data (like Wavelet(FWT) transform)
+    public ndarray? ImageData{get;set;}
+    // Signal statistics like mean, std, skew, amplitude, etc
+    public (float stat, string name)[]? Stats{get;set;}
+    public ComputedSignal(){}
+    public ComputedSignal(ndarray X, ndarray Y, (float stat, string name)[] stats)
+    {
+        this.X = X?.AsFloatArray();
+        Stats = stats;
+        // if we got single signal output of shape [1,N] or [N]
+        if (Y.shape[0] == 1 && Y.shape.iDims.Length == 2 || Y.shape.iDims.Length == 1)
+        {
+            // if we have complex outputs like FFT, keep separate real
+            // and imag part of signal
+            if (Y.Dtype == np.Complex)
+                YImag = Y.Imag?.AsFloatArray();
+            else
+                YImag = null;
+
+            // here X is signal time, Y is signal value
+
+            // Store the X and Y values for plotting
+            this.Y = Y.Real?.AsFloatArray();
+        }
+
+        // if we have 2d array, then render it as image
+        if(Y.shape[0]>1 && Y.shape.iDims.Length == 2)
+        {
+            ImageData = Y;
+        }
+
+        System.Console.WriteLine("Shapes");
+        System.Console.WriteLine(this.X?.Length);
+        System.Console.WriteLine(this.Y?.Length);
+        System.Console.WriteLine(this.ImageData?.shape);
+    }
+    public ComputedSignal Clone()
+    {
+        //Shallow copy
+        return new()
+        {
+            ImageData=ImageData,
+            Stats=Stats,
+            X=X,
+            Y=Y,
+            YImag=YImag
+        };
+    }
+
+    object ICloneable.Clone()
+    {
+        return Clone();
+    }
+}
+
 /// <summary>
 /// Class that implements parallel 
 /// non-blocking simplified signal's computation logic
@@ -20,15 +74,8 @@ public class ComputeSignal : ICloneable
 {
     TrackedOperation<ndarray> combineSources;
     TrackedOperation<ndarray> createdSignal;
-    TrackedOperation<(float stat, string name)[]> signalStatistics;
-    // Properties to hold 1d signal data
-    public float[]? X{get;protected set;}
-    public float[]? Y{get;protected set;}
-    public float[]? YImag{get;protected set;}
-    // Properties to hold 2D data (like Wavelet(FWT) transform)
-    public ndarray? ImageData{get;protected set;}
-    // Signal statistics like mean, std, skew, amplitude, etc
-    public (float stat, string name)[]? Stats{get;protected set;}
+    TrackedOperation<(float stat, string name)[]>? signalStatistics = null;
+
     public ComputeSignal(
         int computePoints,
         IEnumerable<(string letter, ISignalGenerator instance)> generators,
@@ -98,62 +145,42 @@ public class ComputeSignal : ICloneable
 
         signalStatistics.OnExecutionDone += statsRaw =>
         {
-            Stats = statsRaw;
             // Need to dispatch to UI thread since this event is called from background thread
 
-
             var res = createdSignal.Result;
-            var genOut = combineSources?.Result;
+            var genOut = combineSources.Result;
             System.Console.WriteLine("====================");
             System.Console.WriteLine($"Time {genOut?.shape}");
             System.Console.WriteLine($"Signal {res.shape}");
             System.Console.WriteLine($"Signal dtype {res.Dtype}");
-            // if we got single signal output of shape [1,N] or [N]
-            if (res.shape[0] == 1 && res.shape.iDims.Length == 2 || res.shape.iDims.Length == 1)
-            {
-                // if we have complex outputs like FFT, keep separate real
-                // and imag part of signal
-                if (res.Dtype == np.Complex)
-                    YImag = res.Imag?.AsFloatArray();
-                else
-                    YImag = null;
+            this.ComputedSignal = new ComputedSignal(genOut?.at(0) ?? throw new Exception(),res,statsRaw);
 
-                // here X is signal time, Y is signal value
-
-                // Store the X and Y values for plotting
-                X = genOut?.at(0)?.AsFloatArray();
-                Y = res.Real?.AsFloatArray();
-            }
-
-            // if we have 2d array, then render it as image
-            if(res.shape[0]>1 && res.shape.iDims.Length == 2)
-            {
-                ImageData = res;
-            }
             OnExecutionDone.Invoke();
         };
         signalStatistics.OnExecutedStep+=i=>OnExecutedStep(i);
         signalStatistics.CancelState.OnCancel+= ()=>OnCancel();
         signalStatistics.OnException+= e=> OnException(e);
     }
-    public float PercentCompleted => signalStatistics.PercentCompleted;
-    public int ComputePoints { get; }
-    public IEnumerable<(string letter, ISignalGenerator instance)> Generators { get; }
-    public string Expression { get; }
-    public IEnumerable<ISignalOperation> Ops { get; }
-    public IEnumerable<ISignalStatistic> Statistics { get; }
+    public float PercentCompleted => signalStatistics?.PercentCompleted ?? 0;
+    public int ComputePoints { get; } = 1024;
+    public string Expression { get; } = "";
+    public IEnumerable<(string letter, ISignalGenerator instance)> Generators { get; } = [];
+    public IEnumerable<ISignalOperation> Ops { get; } = [];
+    public IEnumerable<ISignalStatistic> Statistics { get; } = [];
+    public ComputedSignal ComputedSignal { get; private set; } = new();
+
     public Action OnCancel = ()=>{};
     public event Action<Exception> OnException = e=>{};
     public event Action<int> OnExecutedStep = i=>{};
     public event Action OnExecutionDone = ()=>{};
     //Run the latest chain element
-    public void Run() => signalStatistics.Run();
+    public void Run() => signalStatistics?.Run();
     // Cancel computation
-    public void Cancel()=>signalStatistics.Cancel();
+    public void Cancel()=>signalStatistics?.Cancel();
     /// <summary>
     /// Waits for task completion
     /// </summary>
-    public void Wait()=>signalStatistics.Await().Wait();
+    public void Wait()=>signalStatistics?.Await().Wait();
     public ComputeSignal Clone()
     {
         return new ComputeSignal(
@@ -164,11 +191,7 @@ public class ComputeSignal : ICloneable
             Statistics
         )
         {
-            ImageData=ImageData,
-            Stats=Stats,
-            X=X,
-            Y=Y,
-            YImag=YImag            
+            ComputedSignal=this.ComputedSignal.Clone()         
         };
     }
     object ICloneable.Clone()

@@ -14,12 +14,12 @@ using System.Text.Json;
 /// </summary>
 namespace SignalCore.Storage;
 
-public class ObjectFactory
+public class ObjectFactory : ICloneable
 {
     public class Argument
     {
-        public required object Instance { get; set; }
-        public required string TypeFullName { get; set; }
+        public required object? Instance { get; set; }
+        public string TypeFullName { get; set; }="";
         
         [System.Text.Json.Serialization.JsonIgnore]
         public Type Type
@@ -31,6 +31,7 @@ public class ObjectFactory
     public static string GetTypeFullName(Type t)
         => t.AssemblyQualifiedName ?? throw new Exception($"Cannot deduce assembly type name of type {t.Name}");
     public string TypeFullName { get; set; } = ""; // type.AssemblyQualifiedName
+    public string ObjectName{get;set;} = "";
     [System.Text.Json.Serialization.JsonIgnore]
     public Type Type => GetTypeFromFullName(TypeFullName);
     public IDictionary<string, Argument> ConstructorArguments { get; set; } = new Dictionary<string,Argument>();
@@ -43,6 +44,7 @@ public class ObjectFactory
     {
         TypeFullName = typeFullName;
         ConstructorArguments = ConvertArgsToArguments(args);
+        ValidateInstanceArgumentsType();
     }
     
     public ObjectFactory(Type type, IDictionary<string, object> args)
@@ -60,7 +62,12 @@ public class ObjectFactory
     
     public ObjectFactory(object instance, (string fieldName, object value)[] args)
         : this(instance.GetType(), args) { }
-    
+    public ObjectFactory(Type type, IDictionary<string, Argument> args)
+    {
+        TypeFullName = GetTypeFullName(type);
+        ConstructorArguments = args;
+        ValidateInstanceArgumentsType();
+    }
     // Generic creation method
     public T CreateInstance<T>()
     {
@@ -74,8 +81,9 @@ public class ObjectFactory
     // Non-generic creation method
     public object CreateInstance()
     {
+        ValidateInstanceArgumentsType();
+
         var type = GetTypeFromFullName(TypeFullName);
-        
         var constructorTypes = ConstructorArguments.Values
             .Select(arg => GetTypeFromFullName(arg.TypeFullName))
             .ToArray();
@@ -91,14 +99,24 @@ public class ObjectFactory
         {
             throw new InvalidOperationException($"No matching constructor found for type: {type.FullName}");
         }
-        
+        //once again check and reparse
         var constructorParameters = ConstructorArguments.Values
-            .Select(arg => DeserializeIfJsonElement(arg.Instance, GetTypeFromFullName(arg.TypeFullName)!))
+            .Select(arg => arg.Instance)
             .ToArray();
         
         return constructorInfo.Invoke(constructorParameters);
     }
-    
+    public void ValidateInstanceArgumentsType()
+    {
+        foreach(var key in ConstructorArguments.Keys)
+        {
+            var value = ConstructorArguments[key];
+            var type = value.Type;
+            ConstructorArguments[key].Instance=value.Instance.CastOrThrow(
+                type, new ArgumentException($"Cannot use \"{value.Instance}\" as value for field \"{key}\" with type {type.Name}")
+            ) ?? throw new ArgumentException($"Parameter {key} cannot be null!");
+        }
+    }
     // Serialization methods
     public string ToJson()=>JsonSerializer.Serialize(this);
     
@@ -108,8 +126,13 @@ public class ObjectFactory
         {
             PropertyNameCaseInsensitive = true
         };
-        return JsonSerializer.Deserialize<ObjectFactory>(json, options)
+        var result = JsonSerializer.Deserialize<ObjectFactory>(json, options)
                ?? throw new ArgumentException($"Cannot deserialize JSON to ObjectFactory: {json}");
+        
+        // parse json element objects to a proper types
+        result.ValidateInstanceArgumentsType();
+        
+        return result;
     }
     
     // Private helper methods
@@ -127,13 +150,29 @@ public class ObjectFactory
         );
     static Dictionary<string, object> ConvertTupleArgsToDictionary((string fieldName, object value)[] args)
         => args.ToDictionary(v => v.fieldName, v => v.value);
-    
-    static object DeserializeIfJsonElement(object value, Type targetType)
+    public ObjectFactory Clone()
     {
-        if (value is JsonElement jsonElement)
+        var options = new JsonSerializerOptions
         {
-            return jsonElement.Deserialize(targetType) ?? throw new ArgumentException($"Failed to convert {value} to type {targetType.Name}");
-        }
-        return value;
+            PropertyNameCaseInsensitive = true
+        };
+        return new(Type,new Dictionary<string, object>())
+        {
+            ConstructorArguments = ConstructorArguments.ToDictionary(
+                v=>v.Key,
+                v=>new Argument
+                {
+                    TypeFullName=v.Value.TypeFullName,
+                    Instance = 
+                        JsonSerializer.Deserialize(JsonSerializer.Serialize(v.Value.Instance), v.Value.Type,options)
+                        ?? v.Value.Instance
+                }
+            )
+        };
+    }
+
+    object ICloneable.Clone()
+    {
+        return Clone();
     }
 }

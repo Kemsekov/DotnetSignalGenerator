@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using MathNet.Numerics.Statistics;
 using NumpyDotNet;
@@ -5,10 +6,14 @@ using NumpyDotNet;
 namespace SignalCore;
 public static class NDArrayExtensions
 {
-    public static ndarray randn_(this ndarray arr)
+    public static ndarray randn_(this ndarray arr,float std=1)
     {
         var r = new np.random();
-        arr[":"]=r.randn(arr.shape).astype(arr.Dtype);
+        var real = (r.randn(arr.shape)*std).astype(arr.Dtype);
+        var complex = 0.ToNdarray();
+        if(arr.Dtype==np.Complex)
+            complex = (r.randn(arr.shape)*std).astype(arr.Dtype)*new Complex(0,1);
+        arr[":"]=real+complex;
         return arr;
     }
 

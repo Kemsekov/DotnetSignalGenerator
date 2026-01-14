@@ -4,6 +4,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
+using SignalCore.Storage;
 using SignalGUI.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,7 @@ public partial class CompositeComponentView : UserControl
 {
     int _dragStartIndex = -1;
     Point _startDragPoint;
+    private SavedSignalsWindow? _savedSignalsWindow;
 
     public CompositeComponentView()
     {
@@ -25,14 +27,44 @@ public partial class CompositeComponentView : UserControl
 
     void OnLoaded(object? sender, RoutedEventArgs e)
     {
+        // Set up event to close saved signals window when main window closes
+        if (GetMainWindow() is Window mainWindow)
+        {
+            mainWindow.Closing += (s, e) => _savedSignalsWindow?.Close();
+        }
+
         if (DataContext is CompositeComponentViewModel viewModel)
         {
             viewModel.ShowSavedSignalsAction = () =>
             {
-                var savedSignalsWindow = new SavedSignalsWindow(viewModel);
-                savedSignalsWindow.Show();
+                // Close existing window if it exists
+                if (_savedSignalsWindow != null)
+                {
+                    _savedSignalsWindow.Close();
+                    _savedSignalsWindow = null; // Clear the reference immediately
+                }
+
+                // Create and show new window
+                _savedSignalsWindow = new SavedSignalsWindow(viewModel);
+
+                // Set up event to clear reference when window is closed
+                _savedSignalsWindow.Closed += (s, e) => _savedSignalsWindow = null;
+
+                _savedSignalsWindow.Show();
             };
         }
+    }
+
+    private Window? GetMainWindow()
+    {
+        var parent = this.Parent;
+        while (parent != null)
+        {
+            if (parent is Window window)
+                return window;
+            parent = parent.Parent;
+        }
+        return null;
     }
 
     // Event handler for when a drag handle is pressed
@@ -179,7 +211,7 @@ public partial class CompositeComponentView : UserControl
         if (sender is ComboBox comboBox &&
             DataContext is CompositeComponentViewModel viewModel)
         {
-            if (comboBox.SelectedItem is GuiObjectFactory selectedSourceType)
+            if (comboBox.SelectedItem is ObjectFactory selectedSourceType)
             {
                 viewModel.AddSources(selectedSourceType);
                 // Clear the selection so the same item can be selected again
@@ -193,7 +225,7 @@ public partial class CompositeComponentView : UserControl
         if (sender is ComboBox comboBox &&
             DataContext is CompositeComponentViewModel viewModel)
         {
-            if (comboBox.SelectedItem is GuiObjectFactory selectedFilterType)
+            if (comboBox.SelectedItem is ObjectFactory selectedFilterType)
             {
                 viewModel.AddFilters(selectedFilterType);
                 // Clear the selection so the same item can be selected again

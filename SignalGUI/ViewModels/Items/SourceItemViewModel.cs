@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
+using SignalCore.Storage;
 
 namespace SignalGUI.ViewModels;
 
@@ -9,6 +10,6 @@ public partial class SourceItemViewModel : ViewModelBase
     string _letter = "";
 
     [ObservableProperty]
-    GuiObjectFactory _factory = new(typeof(object),null);
-    public string Configuration => $"{Factory?.Name}";
+    ObjectFactory _factory = new(typeof(object),[]);
+    public string Configuration => $"{Factory?.Type.Name}";
 }

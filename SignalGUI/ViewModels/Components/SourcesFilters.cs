@@ -1,11 +1,12 @@
 using CommunityToolkit.Mvvm.Input;
+using SignalCore.Storage;
 
 namespace SignalGUI.ViewModels;
 
 public partial class CompositeComponentViewModel
 {
     [RelayCommand]
-    public void AddSources(GuiObjectFactory selectedSourceType)
+    public void AddSources(ObjectFactory selectedSourceType)
     {
         
         if (selectedSourceType == null) return;
@@ -30,7 +31,7 @@ public partial class CompositeComponentViewModel
     }
 
     [RelayCommand]
-    public void AddFilters(GuiObjectFactory selectedFilterType)
+    public void AddFilters(ObjectFactory selectedFilterType)
     {
         if (selectedFilterType == null) return;
 

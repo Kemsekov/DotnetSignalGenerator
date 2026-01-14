@@ -30,12 +30,12 @@ public class ComputeSignalTests
         computeSignal.Run();
         computeSignal.Wait(); // Wait for computation to complete
 
-        Assert.NotNull(computeSignal.X);
-        Assert.NotNull(computeSignal.Y);
-        Assert.Equal(100, computeSignal.X.Length);
-        Assert.Equal(100, computeSignal.Y.Length);
-        Assert.NotNull(computeSignal.Stats);
-        Assert.Single(computeSignal.Stats);
+        Assert.NotNull(computeSignal.ComputedSignal.X);
+        Assert.NotNull(computeSignal.ComputedSignal.Y);
+        Assert.Equal(100, computeSignal.ComputedSignal.X.Length);
+        Assert.Equal(100, computeSignal.ComputedSignal.Y.Length);
+        Assert.NotNull(computeSignal.ComputedSignal.Stats);
+        Assert.Single(computeSignal. ComputedSignal.Stats);
     }
 
     [Fact]
@@ -61,10 +61,10 @@ public class ComputeSignalTests
         computeSignal.Run();
         computeSignal.Wait(); // Wait for computation to complete
 
-        Assert.NotNull(computeSignal.X);
-        Assert.NotNull(computeSignal.Y);
-        Assert.Equal(100, computeSignal.X.Length);
-        Assert.Equal(100, computeSignal.Y.Length);
+        Assert.NotNull(computeSignal.ComputedSignal.X);
+        Assert.NotNull(computeSignal.ComputedSignal.Y);
+        Assert.Equal(100, computeSignal.ComputedSignal.X.Length);
+        Assert.Equal(100, computeSignal.ComputedSignal.Y.Length);
     }
 
     [Fact]
@@ -126,10 +126,10 @@ public class ComputeSignalTests
         computeSignal.Run();
         computeSignal.Wait(); // Wait for computation to complete
 
-        Assert.NotNull(computeSignal.X);
-        Assert.NotNull(computeSignal.Y);
-        Assert.Equal(100, computeSignal.X.Length);
-        Assert.Equal(100, computeSignal.Y.Length);
+        Assert.NotNull(computeSignal.ComputedSignal.X);
+        Assert.NotNull(computeSignal.ComputedSignal.Y);
+        Assert.Equal(100, computeSignal.ComputedSignal.X.Length);
+        Assert.Equal(100, computeSignal.ComputedSignal.Y.Length);
     }
 
     [Fact]
@@ -159,12 +159,12 @@ public class ComputeSignalTests
         computeSignal.Run();
         computeSignal.Wait(); // Wait for computation to complete
 
-        Assert.NotNull(computeSignal.X);
-        Assert.NotNull(computeSignal.Y);
-        Assert.NotNull(computeSignal.YImag); // Complex output should have imaginary part
-        Assert.Equal(100, computeSignal.X.Length);
-        Assert.Equal(100, computeSignal.Y.Length);
-        Assert.Equal(100, computeSignal.YImag.Length);
+        Assert.NotNull(computeSignal.ComputedSignal.X);
+        Assert.NotNull(computeSignal.ComputedSignal.Y);
+        Assert.NotNull(computeSignal.ComputedSignal.YImag); // Complex output should have imaginary part
+        Assert.Equal(100, computeSignal.ComputedSignal.X.Length);
+        Assert.Equal(100, computeSignal.ComputedSignal.Y.Length);
+        Assert.Equal(100, computeSignal.ComputedSignal.YImag.Length);
     }
 
     [Fact]
@@ -195,9 +195,10 @@ public class ComputeSignalTests
         computeSignal.Wait(); // Wait for computation to complete
 
         // FWT produces 2D output, so ImageData should be set instead of X,Y
-        Assert.NotNull(computeSignal.ImageData);
-        Assert.Null(computeSignal.X);  // X and Y should be null for 2D output
-        Assert.Null(computeSignal.Y);
+        Assert.NotNull(computeSignal.ComputedSignal.ImageData);
+        Assert.True(computeSignal.ComputedSignal.ImageData.shape.iDims.Length==2);
+        Assert.NotNull(computeSignal.ComputedSignal.X);  // X and Y should be null for 2D output
+        Assert.Null(computeSignal.ComputedSignal.Y);
     }
 
     [Fact]
@@ -229,11 +230,11 @@ public class ComputeSignalTests
         computeSignal.Run();
         computeSignal.Wait(); // Wait for computation to complete
 
-        Assert.NotNull(computeSignal.Stats);
-        Assert.Equal(4, computeSignal.Stats.Length); // 4 statistics
+        Assert.NotNull(computeSignal.ComputedSignal.Stats);
+        Assert.Equal(4, computeSignal.ComputedSignal.Stats.Length); // 4 statistics
 
         // Check that all statistics have proper names
-        var statNames = computeSignal.Stats.Select(s => s.name).ToList();
+        var statNames = computeSignal.ComputedSignal.Stats.Select(s => s.name).ToList();
         Assert.Contains("Mean", statNames);
         Assert.Contains("STD", statNames);
         Assert.Contains("Minimum", statNames);
@@ -267,8 +268,8 @@ public class ComputeSignalTests
         computeSignal.Wait(); // Wait for computation to complete
 
         Assert.True(executionDoneCalled);
-        Assert.NotNull(computeSignal.X);
-        Assert.NotNull(computeSignal.Y);
+        Assert.NotNull(computeSignal.ComputedSignal.X);
+        Assert.NotNull(computeSignal.ComputedSignal.Y);
     }
 
     [Fact]
@@ -409,8 +410,8 @@ public class ComputeSignalTests
 
         // After running, computation should be complete
         Assert.Equal(1.0f, computeSignal.PercentCompleted);
-        Assert.NotNull(computeSignal.X);
-        Assert.NotNull(computeSignal.Y);
+        Assert.NotNull(computeSignal.ComputedSignal.X);
+        Assert.NotNull(computeSignal.ComputedSignal.Y);
     }
 
     [Fact]
