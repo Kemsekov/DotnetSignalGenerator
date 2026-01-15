@@ -1,0 +1,62 @@
+# Test Coverage Report
+
+Average Line Rate (over non-zero classes): 0.9115
+Average Branch Rate (over non-zero classes): 0.8430
+
+| ClassName | Line Rate | Branch Rate |
+|-----------|-----------|-------------|
+| PrimitivesExtensions | 1.0000 | 1.0000 |
+| SignalCore.ComputedSignal | 0.9230 | 0.8333 |
+| SignalCore.ComputeSignal | 0.8421 | 0.5000 |
+| SignalCore.AddNormalNoiseFilter | 0.7619 | 0.6666 |
+| SignalCore.LowPassFilterMethod | 0.8571 | 0.5000 |
+| SignalCore.HighPassFilterMethod | 0.8571 | 0.5000 |
+| SignalCore.LowPassFilter | 0.8000 | 0.5000 |
+| SignalCore.HighPassFilter | 0.8000 | 0.5000 |
+| SignalCore.ZeroPhaseFilter | 0.6170 | 0.4285 |
+| SignalCore.BilateralFilter | 0.2142 | 0.3750 |
+| SignalCore.SignalGeneratorBase | 0.8333 | 0.5000 |
+| SignalCore.SinusoidGenerator | 1.0000 | 1.0000 |
+| SignalCore.SquareGenerator | 1.0000 | 1.0000 |
+| SignalCore.TriangleGenerator | 1.0000 | 1.0000 |
+| SignalCore.SawToothGenerator | 1.0000 | 1.0000 |
+| SignalCore.MinMaxNormalization | 0.6842 | 0.5000 |
+| SignalCore.ZScoreNormalization | 0.9166 | 0.5000 |
+| SignalCore.MeanStatistic | 1.0000 | 1.0000 |
+| SignalCore.StdStatistic | 1.0000 | 1.0000 |
+| SignalCore.MinStatistic | 1.0000 | 1.0000 |
+| SignalCore.MaxStatistic | 1.0000 | 1.0000 |
+| SignalCore.StringExpression | 1.0000 | 1.0000 |
+| SignalCore.FFTTransform | 1.0000 | 1.0000 |
+| SignalCore.FWTTransform | 0.9230 | 0.5000 |
+| SignalCore.ArgumentsTypesUtils | 0.6615 | 0.6406 |
+| SignalCore.ExceptionExtensions | 1.0000 | 1.0000 |
+| SignalCore.NDArrayExtensions | 0.6666 | 0.5000 |
+| SignalCore.Storage.FactoryModel | 1.0000 | 1.0000 |
+| SignalCore.Storage.SignalStatistic | 1.0000 | 1.0000 |
+| SignalCore.Storage.SessionModel | 1.0000 | 1.0000 |
+| SignalCore.Storage.ManyToSession | 1.0000 | 1.0000 |
+| SignalCore.Storage.SessionGenerators | 1.0000 | 1.0000 |
+| SignalCore.Storage.OperationManyToSession | 1.0000 | 1.0000 |
+| SignalCore.Storage.SessionTransforms | 1.0000 | 1.0000 |
+| SignalCore.Storage.SessionFilters | 1.0000 | 1.0000 |
+| SignalCore.Storage.SessionNormalization | 1.0000 | 1.0000 |
+| SignalCore.Storage.SessionStateModel | 1.0000 | 1.0000 |
+| SignalCore.Storage.NDarrayBinaryDataModel | 0.9661 | 0.7500 |
+| SignalCore.Storage.ObjectFactory | 0.8992 | 0.7222 |
+| SignalCore.Storage.ObjectFactory/Argument | 0.7500 | 1.0000 |
+| SignalCore.Storage.DataModel | 1.0000 | 1.0000 |
+| SignalCore.Storage.SignalStorage | 0.9700 | 0.8888 |
+| SignalCore.GuiState.GuiSignalState | 0.9750 | 0.5000 |
+| SignalCore.GuiState.GuiStateConverter | 0.9754 | 0.7291 |
+| SignalCore.Computation.LazyOperationState | 1.0000 | 1.0000 |
+| SignalCore.Computation.TrackedOperation`1 | 0.9523 | 0.8333 |
+| SignalCore.Computation.TrackedOperation`1/<Await>d__36 | 1.0000 | 1.0000 |
+| SignalCore.Computation.LazyTrackedOperation | 0.7857 | 1.0000 |
+| SignalCore.Computation.LazyTrackedOperation/<>c | 0.5000 | 1.0000 |
+| SignalCore.Computation.LazyTrackedOperation/<>c__10`2 | 1.0000 | 1.0000 |
+| SignalCore.Computation.LazyTrackedOperation/<>c__2`1 | 1.0000 | 1.0000 |
+| SignalCore.Computation.LazyTrackedOperation/<>c__DisplayClass0_0`1 | 1.0000 | 1.0000 |
+| SignalCore.Computation.LazyTrackedOperation/<>c__DisplayClass1_0`1 | 1.0000 | 1.0000 |
+| SignalCore.Computation.LazyTrackedOperation/<>c__DisplayClass4_0 | 1.0000 | 1.0000 |
+| SignalCore.Computation.LazyTrackedOperation/<>c__DisplayClass9_0`2 | 1.0000 | 1.0000 |
