@@ -1,0 +1,289 @@
+@startuml SignalGenerator Architecture
+
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam classBackgroundColor #F9FDFF
+skinparam classBorderColor #333333
+skinparam classArrowColor #333333
+
+package "SignalCore" {
+  
+  package "Computation" {
+    class ComputeSignal {
+      -TrackedOperation<ndarray> combineSources
+      -TrackedOperation<ndarray> createdSignal
+      -TrackedOperation<(float stat, string name)[]> signalStatistics
+      +int ComputePoints
+      +string Expression
+      +IEnumerable<(string, ISignalGenerator)> Generators
+      +IEnumerable<ISignalOperation> Ops
+      +IEnumerable<ISignalStatistic> Statistics
+      +ComputedSignal ComputedSignal
+      +void Run()
+      +void Cancel()
+      +void Wait()
+    }
+    
+    class ComputedSignal {
+      +float[] X
+      +float[] Y
+      +float[] YImag
+      +ndarray ImageData
+      +(float stat, string name)[] Stats
+    }
+    
+    class TrackedOperation {
+      -jobUnit
+      -totalSteps
+      +event OnExecutedStep
+      +event OnExecutionDone
+      +event OnException
+      +IsRunning
+      +PercentCompleted
+      +Run()
+      +Result
+      +Await()
+      +Cancel()
+    }
+    
+    class LazyOperationState {
+      +Canceled
+      +Cancel()
+      +ThrowIfCanceled()
+    }
+    
+    class LazyTrackedOperation {
+      +Composition()
+      +Factory()
+      +Transform()
+    }
+  }
+  
+  package "GuiState" {
+    class GuiSignalState {
+      +ObjectName
+      +ComputedSignal
+      +SignalStatistics
+      +CompletedPercent
+      +Sources
+      +Expression
+      +Filters
+      +SignalParams
+      +Clone()
+    }
+    
+    class GuiStateManager {
+      -_signalStorage
+      +LoadState()
+      +SaveState()
+      +DeleteState()
+      +GetAllStates()
+    }
+    
+    class GuiStateConverter {
+      +LoadFromDB()
+      +ToSessionStateModel()
+    }
+  }
+  
+  package "Storage" {
+    class SignalStorage {
+      +db
+      +SignalStorage()
+      +AddSessionState()
+      +GetSessionState()
+      +DeleteSession()
+    }
+    
+    class ObjectFactory {
+      +TypeFullName
+      +ObjectName
+      +ConstructorArguments
+      +Type
+      +CreateInstance<T>()
+      +CreateInstance()
+      +ToJson()
+      +FromJson()
+      +Clone()
+    }
+    
+    class ObjectFactory_Argument {
+      +Instance
+      +TypeFullName
+      +Type
+    }
+    
+    class SessionModel {
+      +Id
+      +Name
+      +Expression
+      +ComputePoints
+      +CompletedPercent
+      +SignalXId
+      +SignalX
+      +SignalYId
+      +SignalY
+      +SignalStatistics
+    }
+    
+    class NDarrayBinaryDataModel {
+      +Id
+      +DataReal
+      +DataImag
+      +SignalMinReal
+      +SignalMaxReal
+      +SignalMinImag
+      +SignalMaxImag
+      +DataShape
+      +GetNdarray()
+      +SetNdarray()
+    }
+    
+    class GenerationModel {
+      +Id
+      +ObjectFactoryJson
+      +Factory
+    }
+    
+    class FilterModel {
+      +Id
+      +ObjectFactoryJson
+      +Factory
+    }
+    
+    class TransformModel {
+      +Id
+      +ObjectFactoryJson
+      +Factory
+    }
+    
+    class NormalizationModel {
+      +Id
+      +ObjectFactoryJson
+      +Factory
+    }
+    
+    class SessionGenerators {
+      +Id
+      +VarName
+      +SessionId
+      +Session
+      +GenerationId
+      +Generation
+    }
+    
+    class SessionFilters {
+      +Id
+      +VarName
+      +SessionId
+      +Session
+      +FilterId
+      +Filter
+      +Enabled
+    }
+    
+    class SessionTransforms {
+      +Id
+      +VarName
+      +SessionId
+      +Session
+      +TransformId
+      +Transform
+      +Enabled
+    }
+    
+    class SessionNormalization {
+      +Id
+      +VarName
+      +SessionId
+      +Session
+      +NormalizationId
+      +Normalization
+      +Enabled
+    }
+    
+    class SessionStateModel {
+      +Session
+      +Generations
+      +Filters
+      +Transforms
+      +Normalizations
+    }
+    
+    class SignalStatistic {
+      +Name
+      +Statistic
+    }
+  }
+  
+  package "Signals" {
+    interface ISignalGenerator {
+      +Sample()
+    }
+    
+    interface ISignalOperation {
+      +Compute()
+    }
+    
+    interface IFilter {
+      +Compute()
+    }
+    
+    interface ITransform {
+      +Compute()
+    }
+    
+    interface INormalization {
+      +Compute()
+    }
+    
+    interface ISignalStatistic {
+      +Name
+      +Compute()
+    }
+  }
+}
+
+package "SignalGUI" {
+  class MainWindowViewModel {
+    +Greeting
+    +CompositeComponentViewModel
+  }
+}
+
+' Relationships
+ComputeSignal --> ComputedSignal : creates/contains
+ComputeSignal --> TrackedOperation : uses
+TrackedOperation --> LazyOperationState : contains
+LazyTrackedOperation --> TrackedOperation : creates
+GuiSignalState --> ComputedSignal : contains
+GuiStateManager --> SignalStorage : uses
+GuiStateManager --> GuiSignalState : manages
+GuiStateConverter --> SignalStorage : uses
+GuiStateConverter --> GuiSignalState : converts
+GuiStateConverter --> SessionStateModel : creates
+SignalStorage --> SessionModel : stores
+SignalStorage --> SessionStateModel : manages
+SessionModel --> NDarrayBinaryDataModel : references
+SessionModel --> SignalStatistic : contains
+SessionGenerators --> SessionModel : many-to-one
+SessionGenerators --> GenerationModel : many-to-one
+SessionFilters --> SessionModel : many-to-one
+SessionFilters --> FilterModel : many-to-one
+SessionTransforms --> SessionModel : many-to-one
+SessionTransforms --> TransformModel : many-to-one
+SessionNormalization --> SessionModel : many-to-one
+SessionNormalization --> NormalizationModel : many-to-one
+GenerationModel --> ObjectFactory : contains
+FilterModel --> ObjectFactory : contains
+TransformModel --> ObjectFactory : contains
+NormalizationModel --> ObjectFactory : contains
+ObjectFactory --> ObjectFactory_Argument : contains
+ISignalGenerator <|-- ComputeSignal : used by
+ISignalOperation <|-- ComputeSignal : used by
+ISignalStatistic <|-- ComputeSignal : used by
+ISignalGenerator <|-- ObjectFactory : instantiated by
+ISignalOperation <|-- ObjectFactory : instantiated by
+ISignalStatistic <|-- ObjectFactory : instantiated by
+
+@enduml

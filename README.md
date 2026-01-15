@@ -39,7 +39,7 @@ cd DotnetSignalGenerator/SignalGUI && dotnet run
 Проект разработан с использованием AvaloniaUI, что обеспечивает кроссплатформенную совместимость с Linux, Windows и macOS. Приложение протестировано в основном на Linux, но должно корректно работать и на других платформах.
 
 ## Схематическое объяснение как работает интерфейс
-<img width="2000" height="990" alt="image" src="https://github.com/user-attachments/assets/b593196c-fd97-4b2c-be21-cded15f1b958" />
+<img width="600" height="300" alt="image" src="https://github.com/user-attachments/assets/b593196c-fd97-4b2c-be21-cded15f1b958" />
 
 ## Высокая скорость обработки данных
 Все математические операции реализованы с использованием NumpyDotnet - высокопроизводительной библиотеки для численных вычислений. Это обеспечивает быструю обработку сигналов даже при работе с большими объемами данных, позволяя выполнять сложные фильтрации, трансформации и статистический анализ в реальном времени.
@@ -119,8 +119,8 @@ cd DotnetSignalGenerator/SignalGUI && dotnet run
 ### Возможность объединения сигналов
 Для комбинирования сигналов используется система математических выражений: каждому сгенерированному сигналу присваивается буквенное обозначение, и с помощью этих обозначений можно создавать сложные комбинации сигналов с помощью математических операций (сложение, вычитание, умножение и т.д.), в том числе, с поддержкой мат-функций через объект `np`
 
-<img width="1376" height="1151" alt="image" src="https://github.com/user-attachments/assets/46a4f015-3ebe-4d6d-b0bc-83eb79899733" />
-<img width="1376" height="1151" alt="image" src="https://github.com/user-attachments/assets/1ebe69b1-60e2-4f8d-a047-5989ee7c1fd4" />
+<img width="600" height="450" alt="image" src="https://github.com/user-attachments/assets/46a4f015-3ebe-4d6d-b0bc-83eb79899733" />
+<img width="600" height="450" alt="image" src="https://github.com/user-attachments/assets/1ebe69b1-60e2-4f8d-a047-5989ee7c1fd4" />
 
 ## Поддержка визуализации различных типов сигналов
 Приложение обеспечивает полноценную визуализацию различных типов сигналов:
@@ -129,10 +129,12 @@ cd DotnetSignalGenerator/SignalGUI && dotnet run
 * **Двумерные данные** - поддерживаются для визуализации результатов вейвлет-преобразований (FWT) и других многомерных представлений сигналов
 
 Комплексный сигнал (результат FFT)
-<img width="1593" height="1154" alt="image" src="https://github.com/user-attachments/assets/1eb9e676-e415-4f8d-ab87-acbf2297fd3c" />
+
+<img width="600" height="450" alt="image" src="https://github.com/user-attachments/assets/1eb9e676-e415-4f8d-ab87-acbf2297fd3c" />
 
 Двумерные данные (Wavelet преобразование)
-<img width="1688" height="1167" alt="image" src="https://github.com/user-attachments/assets/403b9d58-2f50-46ce-83d5-4281c34d0b44" />
+
+<img width="600" height="450" alt="image" src="https://github.com/user-attachments/assets/403b9d58-2f50-46ce-83d5-4281c34d0b44" />
 
 ## Планы по развитию и улучшению
 * Реализация одновременного отображения нескольких сигналов на одном графике
