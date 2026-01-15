@@ -1,5 +1,3 @@
-// TODO: add tests that each object is properly created/saved/fetched and recreated
-// via ObjectFactory and database
 using System.Numerics;
 using SQLite;
 using SQLiteNetExtensions.Attributes;

@@ -1,5 +1,6 @@
-using System.Numerics;
-using NumpyDotNet;
+// TODO: this is way too much hardcoded stuff
+// it is better to split these operations into
+// some smaller manageable chunks
 using SignalCore.Storage;
 using SignalCore.Parameters;
 using SQLiteNetExtensions.Extensions;
@@ -190,6 +191,11 @@ public static class GuiStateConverter
             extractedNorms
         );
     }
+
+    // TODO: fix that
+    // it is way too much constrained by naming conventions
+    // you must identify such things based on type metadata (does it implement interface?)
+    // rather than name conventions
 
     // Helper methods to determine the type of operation
     private static bool IsFilterOperation((bool visible, ObjectFactory factory) op)

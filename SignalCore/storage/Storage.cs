@@ -24,6 +24,11 @@ public class DataModel : Attribute
     }
 }
 
+// TODO: add interface for SignalStorage
+// and use it for GuiStateManager and throughout
+// the project instead of implementation
+// based on sqlite
+
 public class SignalStorage : IDisposable
 {
     public SQLiteConnection db;

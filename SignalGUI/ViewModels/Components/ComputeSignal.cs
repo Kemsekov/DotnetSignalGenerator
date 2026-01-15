@@ -1,5 +1,3 @@
-// TODO: separate somehow signal creation/plotting/UI gesture interaction
-// logic into separate classes
 using System;
 using System.Linq;
 using CommunityToolkit.Mvvm.Input;

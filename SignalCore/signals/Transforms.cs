@@ -1,4 +1,3 @@
-//TODO: Add tests for transforms and their inverses
 using System.Numerics;
 using MathNet.Numerics.IntegralTransforms;
 using NumpyDotNet;

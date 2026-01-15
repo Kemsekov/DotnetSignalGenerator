@@ -1,16 +1,3 @@
-//TODO: Add tests
-// 1. Check if computation works (all methods works as intended)
-// 2. Check if cancellation system works, so if we have multiple
-// tracked operations like T1->T2->T3, then stopping next one will stop all previous
-// 3. Check that all events like OnExecutedStep, OnCancel, OnException is called.
-// when operation throws exception
-// 3.1 Check that if exception on previous tracked events happened, it properly propagates to forward tracked ops as well,
-// so if we have chain T1->T2->T3, and T1 throws, then T1, T2 and T3 OnException is called
-// 4. Check that ElapsedMilliseconds time for operation is properly computed
-// for different cases: when we have chain T1->T2->T3, and some previous steps are
-// precomputed, when not precomputed. Check that time works as intended
-// 5. Check that ExecutedSteps,TotalSteps are updated properly with chained
-// lazy operations and accumulates.
 using System.Diagnostics;
 namespace SignalCore.Computation;
 

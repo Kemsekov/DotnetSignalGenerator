@@ -1,4 +1,3 @@
-// TODO: добавь тесты, валидатор данных какой-нибудь общий
 namespace SignalCore;
 
 /// <param name="tStart">Start time of signal</param>
